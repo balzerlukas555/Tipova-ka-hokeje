@@ -6,37 +6,29 @@
     <title>Hokejová Tipovačka</title>
     <style>
         body{font-family:Arial, sans-serif;background:#0f172a;color:white;text-align:center;margin:0;padding:10px;}
-        h1{margin-top:10px; color: #3b82f6;}
         .match{background:#1e293b;padding:20px;margin:15px auto;border-radius:12px;max-width:500px;border: 1px solid #334155;}
-        button{padding:12px 18px;border:none;border-radius:8px;background:#3b82f6;color:white;cursor:pointer;margin:5px;font-size:14px;}
+        button{padding:12px 18px;border:none;border-radius:8px;background:#3b82f6;color:white;cursor:pointer;margin:5px;}
         button:hover{background:#2563eb;}
-        button:disabled{background:#475569; cursor: not-allowed;}
-        .admin{background:#111827;padding:20px;margin-top:40px;display:none;border-radius:10px;max-width:700px;margin:40px auto;border: 2px dashed #ef4444;}
-        input{padding:8px;border-radius:6px;border:1px solid #334155;margin:5px;background: #1e293b; color: white;}
-        table{margin:20px auto;border-collapse:collapse;width:95%;max-width:900px;background: #1e293b;}
-        td,th{border:1px solid #334155;padding:10px;font-size:14px;}
-        th{background: #334155;}
-        .tableWrap{overflow-x:auto;}
+        .admin{background:#111827;padding:20px;display:none;border-radius:10px;max-width:700px;margin:40px auto;border: 2px dashed #ef4444;}
+        input{padding:8px;border-radius:6px;margin:5px;background: #1e293b; color: white; border: 1px solid #475569;}
+        table{margin:20px auto;border-collapse:collapse;width:95%;background: #1e293b;}
+        td,th{border:1px solid #334155;padding:10px;}
     </style>
 </head>
 <body>
 
     <h1>🏒 Hokejová Tipovačka</h1>
-    <button id="loginBtn">Admin přihlášení</button>
+    <button onclick="adminLogin()">Admin přihlášení</button>
 
-    <div id="matches"></div>
+    <div id="matches">Načítám zápasy...</div>
 
-    <h2>Průběžná tabulka</h2>
-    <div class="tableWrap">
-        <table id="playersTable"></table>
-    </div>
+    <h2>Tabulka</h2>
+    <div style="overflow-x:auto;"><table id="playersTable"></table></div>
 
     <div class="admin" id="adminPanel">
         <h2>Admin panel</h2>
-        <button id="logoutBtn" style="background:#ef4444">Odhlásit se</button>
-        <br><br>
-        <button id="addMatchBtn">+ Přidat nový zápas</button>
-        <button id="recalcBtn">🔄 Přepočítat body</button>
+        <button onclick="document.getElementById('adminPanel').style.display='none'" style="background:#ef4444">Zavřít</button>
+        <button onclick="addMatch()">+ Přidat zápas</button>
         <div id="adminMatches"></div>
     </div>
 
@@ -57,147 +49,116 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // ZAŠIFROVANÉ HESLO (SHA-256 pro "Acsparta333")
-    const ADMIN_HASH = "81907085a676646535560965d1b7d566371c66289b703e7e96b7617300c7104d";
+    // --- NASTAVENÍ HESLA ---
+    const MOJE_HESLO = "Acsparta333"; 
 
-    let matches = [], tips = {}, points = {};
-    let playerId = localStorage.getItem("playerId") || "p_" + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem("playerId", playerId);
-    let playerName = localStorage.getItem("playerName");
-
-    // Funkce pro bezpečné ověření hesla bez externích knihoven
-    async function checkPassword(input) {
-        const msgUint8 = new TextEncoder().encode(input);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        return hashHex === ADMIN_HASH;
-    }
-
-    document.getElementById("loginBtn").onclick = async () => {
-        let pass = prompt("Zadej admin heslo:");
-        if (await checkPassword(pass)) {
+    window.adminLogin = function() {
+        let p = prompt("Zadej heslo:");
+        if (p === MOJE_HESLO) {
             document.getElementById("adminPanel").style.display = "block";
-            window.scrollTo(0, document.body.scrollHeight);
+            renderAdmin();
         } else {
-            alert("Špatné heslo!");
+            alert("Spatne heslo!");
         }
     };
 
-    document.getElementById("logoutBtn").onclick = () => document.getElementById("adminPanel").style.display = "none";
+    let matches = [], tips = {}, points = {};
+    let pId = localStorage.getItem("pId") || "p" + Math.random().toString(16).slice(2);
+    localStorage.setItem("pId", pId);
 
-    // REALTIME DATA
+    // Načítání dat
     onValue(ref(db, "/"), snap => {
-        const data = snap.val() || {};
-        matches = data.matches || [];
-        tips = data.tips || {};
-        points = data.points || {};
+        const d = snap.val() || {};
+        matches = d.matches || [];
+        tips = d.tips || {};
+        points = d.points || {};
         render();
     });
 
     function render() {
-        const mdiv = document.getElementById("matches");
-        mdiv.innerHTML = "";
-        matches.forEach((m, i) => {
-            if(!m) return;
-            let div = document.createElement("div");
-            div.className = "match";
-            div.innerHTML = `
-                <h2>${m.home} vs ${m.away}</h2>
-                <p>📅 ${m.date ? m.date.replace("T", " ") : "---"}</p>
-                <button id="tip-${i}" ${m.closed ? "disabled" : ""}>${m.closed ? "Zavřeno" : "Tipovat"}</button>
-                <p><strong>Výsledek: ${m.result || "- : -"}</strong></p>
-            `;
-            mdiv.appendChild(div);
-            if(!m.closed) document.getElementById(`tip-${i}`).onclick = () => sendTip(i);
-        });
-        renderTable();
-        renderAdmin();
-    }
-
-    function renderTable() {
-        let table = document.getElementById("playersTable");
-        let html = "<tr><th>Hráč</th><th>Body</th>";
-        matches.forEach(m => { if(m) html += `<th>${m.home.substring(0,3)}</th>`; });
-        html += "</tr>";
-        for (let id in tips) {
-            html += `<tr><td>${tips[id].name}</td><td style="color:#fbbf24">${points[id] || 0}</td>`;
-            matches.forEach((m, i) => { if(m) html += `<td>${tips[id].tips?.[i] || "-"}</td>`; });
-            html += "</tr>";
-        }
-        table.innerHTML = html;
-    }
-
-    async function sendTip(id) {
-        if (!playerName) {
-            playerName = prompt("Tvoje jméno:");
-            if (!playerName) return;
-            localStorage.setItem("playerName", playerName);
-        }
-        let score = prompt("Tip (např. 3:2):");
-        if (score && score.includes(":")) {
-            set(ref(db, `tips/${playerId}/name`), playerName);
-            set(ref(db, `tips/${playerId}/tips/${id}`), score);
-        }
-    }
-
-    // ADMIN LOGIKA
-    function renderAdmin() {
-        let div = document.getElementById("adminMatches");
+        const div = document.getElementById("matches");
         div.innerHTML = "";
         matches.forEach((m, i) => {
             if(!m) return;
-            let d = document.createElement("div");
-            d.style.padding = "10px"; d.style.borderBottom = "1px solid #334155";
-            d.innerHTML = `
-                <input value="${m.home}" id="h-${i}"> vs <input value="${m.away}" id="a-${i}">
-                <button id="save-${i}">Uložit názvy</button>
-                <button id="tog-${i}">${m.closed ? "🔓" : "🔒"}</button>
-                <button id="res-${i}" style="background:#10b981">Výsledek</button>
-                <button id="del-${i}" style="background:#991b1b">Smazat</button>
-            `;
-            div.appendChild(d);
-            document.getElementById(`save-${i}`).onclick = () => {
-                set(ref(db, `matches/${i}/home`), document.getElementById(`h-${i}`).value);
-                set(ref(db, `matches/${i}/away`), document.getElementById(`a-${i}`).value);
-            };
-            document.getElementById(`tog-${i}`).onclick = () => set(ref(db, `matches/${i}/closed`), !m.closed);
-            document.getElementById(`del-${i}`).onclick = () => { matches.splice(i, 1); set(ref(db, "matches"), matches); };
-            document.getElementById(`res-${i}`).onclick = () => {
-                let r = prompt("Výsledek (např. 2:1):");
-                if(r) { 
-                    set(ref(db, `matches/${id}/result`), r);
-                    set(ref(db, `matches/${id}/closed`), true);
-                    recalcPoints();
-                }
-            };
+            div.innerHTML += `
+                <div class="match">
+                    <h2>${m.home} vs ${m.away}</h2>
+                    <button onclick="sendTip(${i})" ${m.closed ? 'disabled' : ''}>
+                        ${m.closed ? 'Uzavřeno' : 'Tipovat'}
+                    </button>
+                    <p>Výsledek: <b>${m.result || "-:-"}</b></p>
+                </div>`;
         });
+        renderTable();
+        if(document.getElementById("adminPanel").style.display === "block") renderAdmin();
     }
 
-    document.getElementById("addMatchBtn").onclick = () => {
-        if(!matches) matches = [];
-        matches.push({ home: "Tým A", away: "Tým B", result: "-", closed: false });
+    window.sendTip = function(i) {
+        let n = localStorage.getItem("pName") || prompt("Tvoje jméno:");
+        if(!n) return;
+        localStorage.setItem("pName", n);
+        let t = prompt("Tvůj tip (např. 3:2):");
+        if(t && t.includes(":")) {
+            set(ref(db, `tips/${pId}/name`), n);
+            set(ref(db, `tips/${pId}/tips/${i}`), t);
+        }
+    };
+
+    function renderTable() {
+        let h = "<tr><th>Hráč</th><th>Body</th></tr>";
+        for (let id in tips) {
+            h += `<tr><td>${tips[id].name}</td><td>${points[id] || 0}</td></tr>`;
+        }
+        document.getElementById("playersTable").innerHTML = h;
+    }
+
+    // ADMIN FUNKCE
+    window.addMatch = function() {
+        matches.push({home:"Tým A", away:"Tým B", closed:false, result:"-"});
         set(ref(db, "matches"), matches);
     };
 
-    function recalcPoints() {
-        let newPoints = {};
-        for (let pId in tips) {
+    window.setRes = function(i) {
+        let r = prompt("Výsledek (3:2):");
+        if(r) {
+            set(ref(db, `matches/${i}/result`), r);
+            set(ref(db, `matches/${i}/closed`), true);
+            recalc();
+        }
+    };
+
+    function renderAdmin() {
+        let ad = document.getElementById("adminMatches");
+        ad.innerHTML = "";
+        matches.forEach((m, i) => {
+            if(!m) return;
+            ad.innerHTML += `
+                <div style="border-bottom:1px solid #444; padding:10px;">
+                    ${m.home} vs ${m.away} 
+                    <button onclick="setRes(${i})">Zadat výsledek</button>
+                    <button onclick="del(${i})" style="background:red">Smazat</button>
+                </div>`;
+        });
+    }
+
+    window.del = (i) => { matches.splice(i,1); set(ref(db, "matches"), matches); };
+
+    function recalc() {
+        let p = {};
+        for (let id in tips) {
             let total = 0;
             matches.forEach((m, i) => {
-                if (m && m.result && m.result !== "-" && tips[pId].tips?.[i]) {
+                if(m.result !== "-" && tips[id].tips?.[i]) {
                     let [rh, ra] = m.result.split(":").map(Number);
-                    let [th, ta] = tips[pId].tips[i].split(":").map(Number);
-                    if (rh === th && ra === ta) total += 3;
-                    else if ((rh > ra && th > ta) || (rh < ra && th < ta) || (rh === ra && th === ta)) total += 1;
+                    let [th, ta] = tips[id].tips[i].split(":").map(Number);
+                    if(rh===th && ra===ta) total += 3;
+                    else if((rh>ra && th>ta) || (rh<ra && th<ta) || (rh===ra && th===ta)) total += 1;
                 }
             });
-            newPoints[pId] = total;
+            p[id] = total;
         }
-        set(ref(db, "points"), newPoints);
+        set(ref(db, "points"), p);
     }
-    document.getElementById("recalcBtn").onclick = recalcPoints;
-
 </script>
 </body>
 </html>
