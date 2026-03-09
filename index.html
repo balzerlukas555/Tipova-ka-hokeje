@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tipovačka</title>
+    <title>Tipovačka Pro</title>
     <style>
         body{font-family:Arial, sans-serif;background:#0f172a;color:white;text-align:center;margin:0;padding:10px;line-height:1.5;}
         h1{color: #3b82f6; margin: 10px 0 20px 0; font-size: 28px;}
@@ -20,6 +20,7 @@
         .danger{background:#991b1b !important;}
         .admin{background:#111827;padding:15px;display:none;border-radius:12px;max-width:600px;margin:30px auto;border:2px dashed #ef4444; box-sizing: border-box;}
         .admin-item{background:#1e293b; margin-bottom:12px; padding:15px; border-radius:8px; border:1px solid #444; display:flex; flex-direction: column; gap: 10px; align-items: center;}
+        .player-manage-item { background: #1e293b; padding: 15px; margin-bottom: 8px; border-radius: 8px; border: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         .tableWrap { width: 100%; max-width: 1000px; margin: 20px auto; overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; background: #1e293b; border-radius: 10px; overflow: hidden; }
         .tip-exact { background: #065f46 !important; color: #6ee7b7 !important; font-weight: bold; }
@@ -33,6 +34,7 @@
             tr { display: block; margin-bottom: 15px; border: 1px solid #334155; border-radius: 10px; padding: 10px; background: #1e293b; }
             td { display: flex; justify-content: space-between; padding: 8px 5px; border: none; border-bottom: 1px solid #2d3748; text-align: right; }
             td::before { content: attr(data-label); font-weight: bold; text-align: left; color: #94a3b8; }
+            .player-manage-item { flex-direction: column; text-align: center; }
         }
         @media (min-width: 601px) {
             td, th { border: 1px solid #334155; padding: 12px; text-align: center; }
@@ -70,6 +72,11 @@
         </div>
 
         <hr style="border:0; border-top:1px solid #334155; margin:20px 0;">
+        <h3>Správa hráčů</h3>
+        <div id="adminPlayers"></div>
+
+        <hr style="border:0; border-top:1px solid #334155; margin:20px 0;">
+        <h3>Správa zápasů</h3>
         <div id="adminMatches"></div>
     </div>
 
@@ -116,13 +123,17 @@
     window.toggleMatch = (i, state) => update(ref(db, `matches/${i}`), {closed: state});
     window.delMatch = (i) => { if(confirm("Smazat tento zápas?")) remove(ref(db, `matches/${i}`)); };
     
+    // SPRÁVA JEDNOTLIVÝCH HRÁČŮ
+    window.deletePlayerTips = (id, name) => { if(confirm(`Smazat TIPY hráči ${name}?`)) remove(ref(db, `tips/${id}/tips`)); };
+    window.deletePlayerPoints = (id, name) => { if(confirm(`Vynulovat BODY hráči ${name}?`)) remove(ref(db, `points/${id}`)); };
+
     window.setRes = (i) => {
         let r = prompt("Výsledek (např. 3:1):");
         if(r) { update(ref(db, `matches/${i}`), {result: r, closed: true}); window.recalcPoints(); }
     };
 
-    window.clearAllTips = () => { if(confirm("Smazat vše?")) { remove(ref(db, "tips")); remove(ref(db, "matches")); } };
-    window.clearAllPoints = () => { if(confirm("Vynulovat body všem?")) remove(ref(db, "points")); };
+    window.clearAllTips = () => { if(confirm("Smazat VŠE (Tipy i Zápasy)?")) { remove(ref(db, "tips")); remove(ref(db, "matches")); } };
+    window.clearAllPoints = () => { if(confirm("Vynulovat body všem hráčům?")) remove(ref(db, "points")); };
 
     window.sendTip = (i) => {
         let n = localStorage.getItem("pName") || prompt("Jméno:");
@@ -167,8 +178,9 @@
         });
 
         let table = document.getElementById("playersTable");
+        let sortedIds = Object.keys(tips).sort((a,b)=>(points[b]||0)-(points[a]||0));
         let html = "<thead><tr><th>Hráč</th><th>Body</th>" + matches.map((m,i)=>m?`<th>Z${i+1}</th>`:'').join('') + "</tr></thead><tbody>";
-        Object.keys(tips).sort((a,b)=>(points[b]||0)-(points[a]||0)).forEach(id => {
+        sortedIds.forEach(id => {
             html += `<tr class="${id === pId ? 'my-row' : ''}"><td data-label="Hráč"><b>${tips[id].name || "IDK"}</b></td><td data-label="Body"><b>${points[id]||0}</b></td>`;
             matches.forEach((m, i) => {
                 if(!m) return;
@@ -184,6 +196,20 @@
             html += "</tr>";
         });
         table.innerHTML = html + "</tbody>";
+
+        // ADMIN SPRÁVA HRÁČŮ
+        const pAdmin = document.getElementById("adminPlayers");
+        pAdmin.innerHTML = "";
+        sortedIds.forEach(id => {
+            const name = tips[id].name || "IDK";
+            pAdmin.innerHTML += `<div class="player-manage-item">
+                <span><b>${name}</b></span>
+                <div style="display:flex; gap:5px;">
+                    <button onclick="window.deletePlayerTips('${id}', '${name}')" class="danger" style="padding:5px 10px; font-size:11px;">Smazat tipy</button>
+                    <button onclick="window.deletePlayerPoints('${id}', '${name}')" class="danger" style="padding:5px 10px; font-size:11px;">Smazat body</button>
+                </div>
+            </div>`;
+        });
 
         const ad = document.getElementById("adminMatches");
         ad.innerHTML = "";
