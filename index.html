@@ -123,9 +123,9 @@
     window.toggleMatch = (i, state) => update(ref(db, `matches/${i}`), {closed: state});
     window.delMatch = (i) => { if(confirm("Smazat tento zápas?")) remove(ref(db, `matches/${i}`)); };
     
-    // SPRÁVA JEDNOTLIVÝCH HRÁČŮ
     window.deletePlayerTips = (id, name) => { if(confirm(`Smazat TIPY hráči ${name}?`)) remove(ref(db, `tips/${id}/tips`)); };
     window.deletePlayerPoints = (id, name) => { if(confirm(`Vynulovat BODY hráči ${name}?`)) remove(ref(db, `points/${id}`)); };
+    window.fullDeletePlayer = (id, name) => { if(confirm(`KOMPLETNĚ smazat hráče ${name} z tabulky?`)) { remove(ref(db, `tips/${id}`)); remove(ref(db, `points/${id}`)); } };
 
     window.setRes = (i) => {
         let r = prompt("Výsledek (např. 3:1):");
@@ -168,12 +168,15 @@
         matches.forEach((m, i) => {
             if(!m) return;
             const locked = isLocked(m);
+            const userHasTip = tips[pId]?.tips?.[i]; // Kontrola, zda uživatel už tipoval
             mDiv.innerHTML += `<div class="match">
                 <span class="match-info">${m.desc || ""}</span>
                 <span class="match-date">${locked ? "🔒 ZÁPAS ZAČAL" : (m.date || "Termín neurčen")}</span>
                 <h2>${m.home} - ${m.away}</h2>
                 <p>Výsledek: <b>${m.result || "-:-"}</b></p>
-                <button onclick="window.sendTip(${i})" ${locked ? 'disabled' : ''}>${locked ? 'Zavřeno' : 'Tipovat'}</button>
+                <button onclick="window.sendTip(${i})" ${locked ? 'disabled' : ''}>
+                    ${locked ? 'Zavřeno' : (userHasTip ? 'Upravit tip' : 'Tipovat')}
+                </button>
             </div>`;
         });
 
@@ -197,16 +200,16 @@
         });
         table.innerHTML = html + "</tbody>";
 
-        // ADMIN SPRÁVA HRÁČŮ
         const pAdmin = document.getElementById("adminPlayers");
         pAdmin.innerHTML = "";
         sortedIds.forEach(id => {
             const name = tips[id].name || "IDK";
             pAdmin.innerHTML += `<div class="player-manage-item">
                 <span><b>${name}</b></span>
-                <div style="display:flex; gap:5px;">
+                <div style="display:flex; gap:5px; flex-wrap:wrap;">
                     <button onclick="window.deletePlayerTips('${id}', '${name}')" class="danger" style="padding:5px 10px; font-size:11px;">Smazat tipy</button>
                     <button onclick="window.deletePlayerPoints('${id}', '${name}')" class="danger" style="padding:5px 10px; font-size:11px;">Smazat body</button>
+                    <button onclick="window.fullDeletePlayer('${id}', '${name}')" class="danger" style="padding:5px 10px; font-size:11px; background:#450a0a !important;">Smazat HRÁČE</button>
                 </div>
             </div>`;
         });
