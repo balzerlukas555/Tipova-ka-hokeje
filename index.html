@@ -5,21 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tipovačka</title>
     <style>
-        body{font-family:Arial, sans-serif;background:#0f172a;color:white;text-align:center;margin:0;padding:10px;}
-        h1{color: #3b82f6; margin-bottom: 20px;}
-        .match{background:#1e293b;padding:20px;margin:15px auto;border-radius:12px;max-width:500px;border: 1px solid #334155;}
-        button{padding:12px 18px;border:none;border-radius:8px;background:#3b82f6;color:white;cursor:pointer;margin:5px;font-weight:bold;}
-        button:hover{background:#2563eb;}
+        /* ZÁKLADNÍ STYL */
+        body{font-family:Arial, sans-serif;background:#0f172a;color:white;text-align:center;margin:0;padding:10px;line-height:1.5;}
+        h1{color: #3b82f6; margin: 10px 0 20px 0; font-size: 28px;}
+        h2{font-size: 22px; margin-top: 30px;}
+        
+        /* ZÁPASY */
+        #matches {display: flex; flex-direction: column; align-items: center; gap: 15px;}
+        .match{background:#1e293b;padding:20px;border-radius:12px;width:100%;max-width:450px;border: 1px solid #334155; box-sizing: border-box;}
+        .match h2 {margin: 0 0 10px 0; font-size: 20px;}
+        
+        /* TLAČÍTKA */
+        button{padding:14px 20px;border:none;border-radius:8px;background:#3b82f6;color:white;cursor:pointer;margin:5px;font-weight:bold;font-size:15px; transition:0.2s; touch-action: manipulation;}
+        button:active{transform: scale(0.96);}
         button:disabled{background:#475569 !important; cursor:not-allowed; opacity:0.6;}
-        .admin{background:#111827;padding:20px;display:none;border-radius:10px;max-width:750px;margin:40px auto;border:2px dashed #ef4444;}
-        .admin-item{background:#1e293b; margin-bottom:10px; padding:15px; border-radius:8px; border:1px solid #444; display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:10px;}
-        input{padding:8px;border-radius:6px;background:#0f172a;color:white;border:1px solid #475569;}
-        table{margin:20px auto;border-collapse:collapse;width:95%;max-width:1000px;background:#1e293b; font-size: 14px;}
-        td,th{border:1px solid #334155;padding:10px;text-align:center;}
-        th{background:#334155; color: #94a3b8;}
-        .winner-cell{color:#fbbf24; font-weight:bold;}
         .danger{background:#991b1b !important;}
-        .danger:hover{background:#7f1d1d !important;}
+
+        /* ADMIN PANEL */
+        .admin{background:#111827;padding:15px;display:none;border-radius:12px;max-width:600px;margin:30px auto;border:2px dashed #ef4444; box-sizing: border-box;}
+        .admin-item{background:#1e293b; margin-bottom:12px; padding:15px; border-radius:8px; border:1px solid #444; display:flex; flex-direction: column; gap: 10px; align-items: center;}
+        .admin-inputs {display: flex; gap: 5px; align-items: center; justify-content: center;}
+        .admin-actions {display: flex; flex-wrap: wrap; justify-content: center; gap: 5px;}
+        input{padding:12px;border-radius:8px;background:#0f172a;color:white;border:1px solid #475569; font-size: 16px; width: 100px;}
+
+        /* RESPONZIVNÍ TABULKA (MOBILNÍ VERZE POD SEBOU) */
+        .tableWrap { width: 100%; max-width: 800px; margin: 0 auto; }
+        table { width: 100%; border-collapse: collapse; background: #1e293b; border-radius: 10px; overflow: hidden; }
+        
+        @media (max-width: 600px) {
+            /* Skryje hlavičku tabulky na mobilu */
+            thead { display: none; }
+            tr { display: block; margin-bottom: 15px; border: 1px solid #334155; border-radius: 10px; padding: 10px; background: #1e293b; }
+            td { display: flex; justify-content: space-between; padding: 8px 5px; border: none; border-bottom: 1px solid #2d3748; text-align: right; }
+            td:last-child { border-bottom: none; }
+            /* Přidá popisky před data */
+            td::before { content: attr(data-label); font-weight: bold; text-align: left; color: #94a3b8; }
+            .winner-cell { font-size: 18px; }
+        }
+
+        /* PC VERZE TABULKY */
+        @media (min-width: 601px) {
+            td, th { border: 1px solid #334155; padding: 12px; text-align: center; }
+            th { background: #334155; color: #94a3b8; }
+        }
+        .winner-cell { color: #fbbf24; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -30,7 +59,7 @@
     <div id="matches">Nacitany zapasy...</div>
 
     <h2>Tabulka vysledku</h2>
-    <div style="overflow-x:auto;">
+    <div class="tableWrap">
         <table id="playersTable"></table>
     </div>
 
@@ -68,29 +97,28 @@
     let matches = [], tips = {}, points = {}, pId = localStorage.getItem("pId") || "p"+Math.random().toString(16).slice(2);
     localStorage.setItem("pId", pId);
 
-    // FUNKCE PRO OKNO
     window.adminLogin = () => {
         let p = prompt("Zadej heslo:");
-        if (p === ADMIN_HESLO) document.getElementById("adminPanel").style.display = "block";
+        if (p === ADMIN_HESLO) {
+            document.getElementById("adminPanel").style.display = "block";
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
     };
 
     window.addMatch = () => {
         const i = matches.length;
-        set(ref(db, `matches/${i}`), {home:"Tým A", away:"Tým B", closed:false, result:"-"});
+        set(ref(db, `matches/${i}`), {home:"Domaci", away:"Hoste", closed:false, result:"-"});
     };
 
     window.updateTeam = (i, side, val) => set(ref(db, `matches/${i}/${side}`), val);
-    
     window.toggleMatch = (i, state) => set(ref(db, `matches/${i}/closed`), state);
-
     window.setRes = (i) => {
-        let r = prompt("Konecny vysledek (napr. 3:1):");
+        let r = prompt("Vysledek (napr. 3:1):");
         if(r) { update(ref(db, `matches/${i}`), {result: r, closed: true}); window.recalcPoints(); }
     };
-
-    window.delMatch = (i) => { if(confirm("Opravdu smazat?")) remove(ref(db, `matches/${i}`)); };
-    window.clearAllTips = () => { if(confirm("Smazat VSECHNY tipy hracu?")) remove(ref(db, "tips")); };
-    window.clearAllPoints = () => { if(confirm("Smazat vsem body?")) remove(ref(db, "points")); };
+    window.delMatch = (i) => { if(confirm("Smazat?")) remove(ref(db, `matches/${i}`)); };
+    window.clearAllTips = () => { if(confirm("Smazat vsechny tipy?")) remove(ref(db, "tips")); };
+    window.clearAllPoints = () => { if(confirm("Vynulovat body?")) remove(ref(db, "points")); };
 
     window.sendTip = (i) => {
         let n = localStorage.getItem("pName") || prompt("Tvoje jmeno:");
@@ -119,7 +147,6 @@
         set(ref(db, "points"), p);
     };
 
-    // NACITANI DAT A RENDER
     onValue(ref(db, "/"), snap => {
         const d = snap.val() || {};
         matches = d.matches || [];
@@ -141,38 +168,43 @@
                 </div>`;
         });
 
-        // Tabulka s tipy
-        let tableHtml = "<tr><th>Hrac</th><th>Body</th>";
-        matches.forEach((m, i) => { if(m) tableHtml += `<th>Z${i+1}</th>`; });
-        tableHtml += "</tr>";
+        // Tabulka
+        let table = document.getElementById("playersTable");
+        let head = "<thead><tr><th>Hrac</th><th>Body</th>";
+        matches.forEach((m, i) => { if(m) head += `<th>Z${i+1}</th>`; });
+        head += "</tr></thead><tbody>";
 
         let sorted = Object.keys(tips).sort((a,b)=>(points[b]||0)-(points[a]||0));
+        let body = "";
         sorted.forEach(id => {
-            tableHtml += `<tr><td><b>${tips[id].name}</b></td><td class="winner-cell">${points[id]||0}</td>`;
+            body += `<tr><td data-label="Hrac"><b>${tips[id].name}</b></td><td data-label="Body" class="winner-cell">${points[id]||0}</td>`;
             matches.forEach((m, i) => {
                 if(m) {
                     let playerTip = (tips[id].tips && tips[id].tips[i]) ? tips[id].tips[i] : "-";
-                    tableHtml += `<td>${playerTip}</td>`;
+                    body += `<td data-label="Z${i+1} (${m.home.substring(0,3)})">${playerTip}</td>`;
                 }
             });
-            tableHtml += "</tr>";
+            body += "</tr>";
         });
-        document.getElementById("playersTable").innerHTML = tableHtml;
+        table.innerHTML = head + body + "</tbody>";
 
-        // Admin sekce
+        // Admin
         const ad = document.getElementById("adminMatches");
         ad.innerHTML = "";
         matches.forEach((m, i) => {
             if(!m) return;
             ad.innerHTML += `
                 <div class="admin-item">
-                    <input oninput="window.updateTeam(${i},'home',this.value)" value="${m.home}" style="width:80px"> vs 
-                    <input oninput="window.updateTeam(${i},'away',this.value)" value="${m.away}" style="width:80px">
-                    <button onclick="window.setRes(${i})" style="background:#10b981">Vysledek</button>
-                    <button onclick="window.toggleMatch(${i}, ${!m.closed})" style="background:#6366f1">
-                        ${m.closed ? 'Otevrit' : 'Zavrit'}
-                    </button>
-                    <button onclick="window.delMatch(${i})" class="danger">Smazat</button>
+                    <div class="admin-inputs">
+                        <input oninput="window.updateTeam(${i},'home',this.value)" value="${m.home}">
+                        <span>vs</span>
+                        <input oninput="window.updateTeam(${i},'away',this.value)" value="${m.away}">
+                    </div>
+                    <div class="admin-actions">
+                        <button onclick="window.setRes(${i})" style="background:#10b981">Vysledek</button>
+                        <button onclick="window.toggleMatch(${i}, ${!m.closed})" style="background:#6366f1">${m.closed ? 'Otevrit' : 'Zavrit'}</button>
+                        <button onclick="window.delMatch(${i})" class="danger">Smazat</button>
+                    </div>
                 </div>`;
         });
     });
