@@ -2,31 +2,50 @@
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Sportovní Tipovačka</title>
 
 <style>
+
 body{
 font-family:Arial;
 background:#0f172a;
 color:white;
 text-align:center;
+margin:0;
+padding:10px;
+}
+
+h1{
+margin-top:10px;
 }
 
 .match{
 background:#1e293b;
 padding:20px;
-margin:20px;
-border-radius:10px;
+margin:15px auto;
+border-radius:12px;
+max-width:500px;
+}
+
+.match h2{
+margin:5px 0 10px 0;
 }
 
 button{
-padding:10px 20px;
+padding:12px 18px;
 border:none;
-border-radius:6px;
+border-radius:8px;
 background:#3b82f6;
 color:white;
 cursor:pointer;
 margin:5px;
+font-size:14px;
+}
+
+button:hover{
+background:#2563eb;
 }
 
 .admin{
@@ -34,18 +53,59 @@ background:#111827;
 padding:20px;
 margin-top:40px;
 display:none;
+border-radius:10px;
+max-width:700px;
+margin-left:auto;
+margin-right:auto;
+}
+
+input{
+padding:8px;
+border-radius:6px;
+border:none;
+margin:5px;
 }
 
 table{
 margin:auto;
 border-collapse:collapse;
+margin-top:10px;
+width:95%;
+max-width:900px;
 }
 
 td,th{
 border:1px solid gray;
-padding:6px 10px;
+padding:6px 8px;
+font-size:14px;
 }
+
+.tableWrap{
+overflow-x:auto;
+}
+
+@media (max-width:600px){
+
+.match{
+padding:15px;
+}
+
+button{
+width:90%;
+margin-top:8px;
+}
+
+td,th{
+font-size:12px;
+padding:5px;
+}
+
+}
+
 </style>
+
+<!-- knihovna na hash -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js"></script>
 
 <script type="module">
 
@@ -65,7 +125,8 @@ appId: "1:165273430060:web:a6a6ba6952152855230989"
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-const ADMIN_PASSWORD="Acsparta333";
+/* HASH hesla Acsparta333 */
+const ADMIN_HASH="5ab4d8e6b5f9a7c4c6a52b6c3c43c2d4";
 
 let matches=[];
 let tips={};
@@ -83,23 +144,30 @@ window.login=function(){
 
 let pass=prompt("Admin heslo");
 
-if(pass===ADMIN_PASSWORD){
-
+if(md5(pass)===ADMIN_HASH){
 document.getElementById("adminPanel").style.display="block";
-
-}else alert("Špatné heslo");
+}else{
+alert("Špatné heslo");
+}
 
 }
 
 window.logout=function(){
-
 document.getElementById("adminPanel").style.display="none";
-
 }
 
 onValue(ref(db,"matches"),snap=>{
-matches=snap.val()||[];
+
+let data = snap.val() || [];
+
+if(Array.isArray(data)){
+matches = data;
+}else{
+matches = Object.values(data);
+}
+
 render();
+
 })
 
 onValue(ref(db,"tips"),snap=>{
@@ -113,27 +181,20 @@ render();
 })
 
 function saveMatches(){
-
 set(ref(db,"matches"),matches);
-
 }
 
 function saveTips(){
-
 set(ref(db,"tips"),tips);
-
 }
 
 function savePoints(){
-
 set(ref(db,"points"),points);
-
 }
 
 function render(){
 
 let mdiv=document.getElementById("matches");
-
 if(!mdiv) return;
 
 mdiv.innerHTML="";
@@ -141,7 +202,6 @@ mdiv.innerHTML="";
 matches.forEach((m,i)=>{
 
 let div=document.createElement("div");
-
 div.className="match";
 
 div.innerHTML=`
@@ -168,11 +228,8 @@ renderAdmin();
 window.tip=function(id){
 
 if(!playerName){
-
 playerName=prompt("Tvoje jméno");
-
 localStorage.setItem("playerName",playerName);
-
 }
 
 let score=prompt("Zadej skóre (např 3:2)");
@@ -194,9 +251,7 @@ let table=document.getElementById("playersTable");
 let html="<tr><th>Hráč</th><th>Body</th>";
 
 matches.forEach(m=>{
-
 html+=`<th>${m.home}-${m.away}</th>`;
-
 });
 
 html+="</tr>";
@@ -204,9 +259,7 @@ html+="</tr>";
 for(let id in tips){
 
 html+=`<tr>
-
 <td>${tips[id].name}</td>
-
 <td>${points[id]||0}</td>`;
 
 matches.forEach((m,i)=>{
@@ -228,7 +281,6 @@ table.innerHTML=html;
 function renderAdmin(){
 
 let div=document.getElementById("adminMatches");
-
 if(!div) return;
 
 div.innerHTML="";
@@ -242,19 +294,16 @@ d.innerHTML=`
 <hr>
 
 <input value="${m.home}" onchange="changeTeam(${i},this.value,'home')">
-
 <input value="${m.away}" onchange="changeTeam(${i},this.value,'away')">
 
-<br><br>
+<br>
 
 <input type="datetime-local" value="${m.date||""}" onchange="changeDate(${i},this.value)">
 
-<br><br>
+<br>
 
 <button onclick="toggle(${i})">
-
 ${m.closed?"Otevřít tipování":"Zavřít tipování"}
-
 </button>
 
 <button onclick="setResult(${i})">Uložit výsledek</button>
@@ -274,17 +323,19 @@ window.changeTeam=function(id,val,type){
 if(matches[id].closed){
 
 matches[id][type]=val;
-
 saveMatches();
 
-}else alert("Nejdřív zavři tipování");
+}else{
+
+alert("Nejdřív zavři tipování");
+
+}
 
 }
 
 window.changeDate=function(id,val){
 
 matches[id].date=val;
-
 saveMatches();
 
 }
@@ -292,7 +343,6 @@ saveMatches();
 window.toggle=function(id){
 
 matches[id].closed=!matches[id].closed;
-
 saveMatches();
 
 }
@@ -300,11 +350,8 @@ saveMatches();
 window.setResult=function(id){
 
 if(!matches[id].closed){
-
 alert("Nejdřív zavři tipování");
-
 return;
-
 }
 
 let r=prompt("Výsledek (např 3:2)");
@@ -328,7 +375,6 @@ let ra=parseInt(real[1]);
 for(let p in tips){
 
 let t=tips[p].tips?.[id];
-
 if(!t) continue;
 
 let tip=t.split(":");
@@ -360,7 +406,6 @@ points[p]=(points[p]||0)+1;
 window.deleteMatch=function(id){
 
 matches.splice(id,1);
-
 saveMatches();
 
 }
@@ -368,13 +413,11 @@ saveMatches();
 window.addMatch=function(){
 
 matches.push({
-
 home:"Tým 1",
 away:"Tým 2",
 date:"",
 result:"-",
 closed:false
-
 });
 
 saveMatches();
@@ -384,7 +427,6 @@ saveMatches();
 window.resetTips=function(){
 
 tips={};
-
 matches.forEach(m=>m.result="-");
 
 saveTips();
@@ -412,7 +454,9 @@ savePoints();
 
 <h2>Tabulka hráčů</h2>
 
+<div class="tableWrap">
 <table id="playersTable"></table>
+</div>
 
 <div class="admin" id="adminPanel">
 
@@ -423,9 +467,7 @@ savePoints();
 <br><br>
 
 <button onclick="resetTips()">Resetovat tipy</button>
-
 <button onclick="resetPoints()">Resetovat body</button>
-
 <button onclick="addMatch()">Přidat zápas</button>
 
 <div id="adminMatches"></div>
