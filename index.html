@@ -8,7 +8,7 @@
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/9391/9391402.png">
     <style>
         body{font-family:Arial, sans-serif;background:#0f172a;color:white;text-align:center;margin:0;padding:10px;line-height:1.5;}
-        h1{color: #3b82f6; margin: 10px 0 20px 0; font-size: 28px;}
+        h1{color: #3b82f6; margin: 5px 0 20px 0; font-size: 28px;}
         h2{font-size: 22px; margin-top: 30px;}
         .menu-bar { margin-bottom: 20px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
         #matches {display: flex; flex-direction: column; align-items: center; gap: 15px;}
@@ -23,7 +23,6 @@
         .admin{background:#111827;padding:15px;display:none;border-radius:12px;max-width:600px;margin:30px auto;border:2px dashed #ef4444; box-sizing: border-box;}
         .admin-item{background:#1e293b; margin-bottom:12px; padding:15px; border-radius:8px; border:1px solid #444; display:flex; flex-direction: column; gap: 10px; align-items: center;}
         
-        /* NÁVOD NA INSTALACI */
         #installGuide { display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#3b82f6; color:white; padding:15px; border-radius:15px; width:90%; max-width:400px; z-index:2000; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .guide-close { position:absolute; top:5px; right:10px; font-weight:bold; cursor:pointer; }
 
@@ -48,21 +47,24 @@
 
     <div id="installGuide">
         <span class="guide-close" onclick="this.parentElement.style.display='none'">×</span>
-        <strong>Měj Tipovačku jako aplikaci!</strong><br>
-        <small>iPhone: Klikni na <img src="https://img.icons8.com/ios/20/ffffff/share.png" style="vertical-align:middle"> a "Přidat na plochu".</small><br>
-        <small>Android: Klikni na tři tečky a "Instalovat aplikaci".</small>
+        <strong>Měj Tipovačku na ploše! 🏒</strong><br>
+        <small>iPhone: Sdílet <img src="https://img.icons8.com/ios/15/ffffff/share.png"> -> "Přidat na plochu".</small><br>
+        <small>Android: Menu -> "Instalovat aplikaci".</small>
     </div>
 
+    <div style="margin-top: 20px;">
+        <img src="https://cdn-icons-png.flaticon.com/512/9391/9391402.png" width="80" style="filter: drop-shadow(0 0 10px #3b82f6);">
+    </div>
     <h1>Tipovačka</h1>
     
     <div class="menu-bar">
-        <button onclick="window.changeName()" class="btn-alt">Změnit jméno</button>
-        <button onclick="window.adminLogin()" class="btn-alt">Admin sekce</button>
+        <button onclick="window.changeName()" class="btn-alt">👤 Změnit jméno</button>
+        <button onclick="window.adminLogin()" class="btn-alt">⚙️ Admin sekce</button>
     </div>
 
     <div id="matches">Načítám zápasy...</div>
 
-    <h2>Tabulka výsledků</h2>
+    <h2>🏆 Tabulka výsledků</h2>
     <div class="tableWrap">
         <table id="playersTable"></table>
     </div>
@@ -71,7 +73,7 @@
         <h2>Admin Panel</h2>
         <div style="display:flex; justify-content:center; gap:5px; flex-wrap:wrap;">
             <button onclick="document.getElementById('adminPanel').style.display='none'" style="background:#475569">Zavřít</button>
-            <button onclick="window.addMatch()" style="background:#059669">Přidat zápas</button>
+            <button onclick="window.addMatch()" style="background:#059669">Přidat zápas 🏒</button>
             <button onclick="window.recalcPoints()" style="background:#8b5cf6">Přepočítat body</button>
         </div>
         
@@ -109,15 +111,18 @@
     let matches = [], tips = {}, points = {}, pId = localStorage.getItem("pId") || "p"+Math.random().toString(16).slice(2);
     localStorage.setItem("pId", pId);
 
-    // ZOBRAZENÍ NÁVODU NA PLOCHU JEN NA MOBILU
     if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && !window.matchMedia('(display-mode: standalone)').matches) {
-        if (!localStorage.getItem("guideHidden")) {
-            document.getElementById("installGuide").style.display = "block";
-        }
+        if (!localStorage.getItem("guideHidden")) { document.getElementById("installGuide").style.display = "block"; }
     }
 
+    // OPRAVENÁ LOGIKA ZAMYKÁNÍ
     const isLocked = (m) => {
-        if (m.closed) return true;
+        // 1. Pokud je explicitně označen jako FALSE (Otevřít), není nikdy zamčený
+        if (m.closed === false) return false;
+        // 2. Pokud je explicitně označen jako TRUE (Zavřít), je vždy zamčený
+        if (m.closed === true) return true;
+        
+        // 3. Jinak kontrola podle času (pokud v adminu není nic nastaveno)
         if (!m.date || !m.date.includes(".")) return false;
         try {
             const [datePart, timePart] = m.date.split(" ");
@@ -135,7 +140,7 @@
 
     window.adminLogin = () => { if (prompt("Heslo:") === ADMIN_HESLO) document.getElementById("adminPanel").style.display = "block"; };
     
-    window.addMatch = () => set(ref(db, `matches/${matches.length}`), {home:"Domácí", away:"Hosté", date:"", desc:"", closed:false, result:"-"});
+    window.addMatch = () => set(ref(db, `matches/${matches.length}`), {home:"Domácí", away:"Hosté", date:"", desc:"", closed: null, result:"-"});
     window.updateMatchData = (i, field, val) => update(ref(db, `matches/${i}`), {[field]: val});
     window.toggleMatch = (i, state) => update(ref(db, `matches/${i}`), {closed: state});
     window.delMatch = (i) => { if(confirm("Smazat tento zápas?")) remove(ref(db, `matches/${i}`)); };
@@ -188,11 +193,11 @@
             const userHasTip = tips[pId]?.tips?.[i];
             mDiv.innerHTML += `<div class="match">
                 <span class="match-info">${m.desc || ""}</span>
-                <span class="match-date">${locked ? "🔒 ZÁPAS ZAČAL" : (m.date || "Termín neurčen")}</span>
+                <span class="match-date">${locked ? "🔒 ZAMČENO" : (m.date || "Termín neurčen")}</span>
                 <h2>${m.home} - ${m.away}</h2>
                 <p>Výsledek: <b>${m.result || "-:-"}</b></p>
                 <button onclick="window.sendTip(${i})" ${locked ? 'disabled' : ''}>
-                    ${locked ? 'Zavřeno' : (userHasTip ? 'Upravit tip' : 'Tipovat')}
+                    ${locked ? 'Zavřeno' : (userHasTip ? 'Upravit tip 🏒' : 'Tipovat 🏒')}
                 </button>
             </div>`;
         });
@@ -241,7 +246,8 @@
                 <div><input oninput="window.updateMatchData(${i},'home',this.value)" value="${m.home}"> <input oninput="window.updateMatchData(${i},'away',this.value)" value="${m.away}"></div>
                 <div style="display:flex; gap:5px; flex-wrap:wrap; justify-content:center;">
                     <button onclick="window.setRes(${i})" style="background:#10b981">Výsledek</button>
-                    <button onclick="window.toggleMatch(${i}, ${!m.closed})" style="background:#6366f1">${m.closed ? 'Otevřít' : 'Zavřít'}</button>
+                    <button onclick="window.toggleMatch(${i}, false)" style="background:#059669">Otevřít</button>
+                    <button onclick="window.toggleMatch(${i}, true)" style="background:#991b1b">Zavřít</button>
                     <button onclick="window.delMatch(${i})" class="danger">Smazat</button>
                 </div>
             </div>`;
