@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tipovačka</title>
+    <title>Tipovačka Pro</title>
     <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/4242/4242098.png" type="image/png">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/4242/4242098.png">
     <style>
@@ -153,22 +153,18 @@
             if (isMobile && !pwaInstalled) {
                 document.getElementById("pwaModal").style.display = "flex";
                 const instr = document.getElementById("pwaInstructions");
-                if (isIOS) {
-                    instr.innerHTML = `<div class="pwa-step"><span>1.</span> Klikni na <b>sdílení</b> <img src="https://img.icons8.com/ios/50/ffffff/share-rounded.png" width="20"></div><div class="pwa-step"><span>2.</span> Vyber <b>"Přidat na plochu"</b></div>`;
-                } else {
-                    instr.innerHTML = `<div class="pwa-step"><span>1.</span> Klikni na <b>tři tečky</b> <img src="https://img.icons8.com/ios/50/ffffff/menu-2.png" width="20"></div><div class="pwa-step"><span>2.</span> Vyber <b>"Instalovat"</b></div>`;
-                }
+                if (isIOS) instr.innerHTML = `<div class="pwa-step"><span>1.</span> Klikni na <b>sdílení</b> <img src="https://img.icons8.com/ios/50/ffffff/share-rounded.png" width="20"></div><div class="pwa-step"><span>2.</span> Vyber <b>"Přidat na plochu"</b></div>`;
+                else instr.innerHTML = `<div class="pwa-step"><span>1.</span> Klikni na <b>tři tečky</b> <img src="https://img.icons8.com/ios/50/ffffff/menu-2.png" width="20"></div><div class="pwa-step"><span>2.</span> Vyber <b>"Instalovat"</b></div>`;
             }
         }, 1500); 
     });
 
-    const formatResult = (res) => {
-        if(!res || res === "-") return "-";
-        return res.toLowerCase().replace("p", " (PP)").replace("n", " (SN)");
-    };
+    const formatResult = (res) => (!res || res === "-") ? "-" : res.toLowerCase().replace("p", " (PP)").replace("n", " (SN)");
 
+    // FIX: Manuální přepínač 'closed' má nyní absolutní přednost
     const isLocked = (m) => {
         if (m.closed === true) return true;
+        if (m.closed === false) return false;
         if (!m.date || !m.date.includes(".")) return false;
         try {
             const [datePart, timePart] = m.date.split(" ");
@@ -185,36 +181,25 @@
     };
 
     window.adminLogin = () => { if (prompt("Heslo:") === ADMIN_HESLO) document.getElementById("adminPanel").style.display = "block"; };
-    window.addMatch = () => set(ref(db, `matches/${Date.now()}`), {home:"Domácí", away:"Hosté", date:"", desc:"", result:"-", live: ""});
+    window.addMatch = () => set(ref(db, `matches/${Date.now()}`), {home:"Domácí", away:"Hosté", date:"", desc:"", result:"-", live: "", closed: false});
     window.updateMatchData = (id, field, val) => update(ref(db, `matches/${id}`), {[field]: val});
     window.toggleMatch = (id, state) => update(ref(db, `matches/${id}`), {closed: state});
-    window.delMatch = (id) => { if(confirm("Smazat zápas? Body zůstávají.")) remove(ref(db, `matches/${id}`)); };
+    window.delMatch = (id) => { if(confirm("Smazat zápas?")) remove(ref(db, `matches/${id}`)); };
     
     window.addExtraPoints = async (id, name) => {
-        let val = prompt(`Upravit body hráči ${name} (např. 5 nebo -5):`);
-        if(val !== null && !isNaN(val)) {
-            const current = points[id] || 0;
-            await set(ref(db, `points/${id}`), current + parseInt(val));
-        }
+        let val = prompt(`Upravit body hráči ${name}:`);
+        if(val !== null && !isNaN(val)) set(ref(db, `points/${id}`), (points[id] || 0) + parseInt(val));
     };
     window.clearPlayerPoints = (id, name) => { if(confirm(`Vynulovat body hráči ${name}?`)) set(ref(db, `points/${id}`), 0); };
     window.deletePlayerTips = (id, name) => { if(confirm(`Smazat tipy hráči ${name}?`)) remove(ref(db, `tips/${id}/tips`)); };
     window.fullDeletePlayer = (id, name) => { if(confirm(`Smazat úplně hráče ${name}?`)) { remove(ref(db, `tips/${id}`)); remove(ref(db, `points/${id}`)); }};
-    
-    // RESETOVACÍ FUNKCE
-    window.clearAllTips = () => { if(confirm("Smazat VŠE z databáze? (Body, Hráči, Zápasy zmizí)")) { remove(ref(db, "matches")); remove(ref(db, "tips")); remove(ref(db, "points")); }};
+    window.clearAllTips = () => { if(confirm("Smazat VŠE?")) { remove(ref(db, "matches")); remove(ref(db, "tips")); remove(ref(db, "points")); }};
     
     window.clearMatchesOnly = async () => {
-        if(confirm("Opravdu smazat všechny zápasy a tipy? Body a jména hráčů ZŮSTANOU.")) {
+        if(confirm("Smazat zápasy a tipy? Body zůstanou.")) {
             remove(ref(db, "matches"));
-            // Smažeme pouze větev 'tips' u všech hráčů, ale ponecháme 'name'
             const tipsSnap = await get(ref(db, "tips"));
-            if(tipsSnap.exists()){
-                const allTips = tipsSnap.val();
-                Object.keys(allTips).forEach(pid => {
-                    remove(ref(db, `tips/${pid}/tips`));
-                });
-            }
+            if(tipsSnap.exists()) Object.keys(tipsSnap.val()).forEach(pid => remove(ref(db, `tips/${pid}/tips`)));
         }
     };
 
@@ -224,15 +209,10 @@
             Object.keys(tips).forEach(pid => {
                 let userTip = tips[pid].tips?.[id];
                 if(userTip) {
-                    let ptsToAdd = 0;
-                    let cleanR = r.toLowerCase().replace("p","").replace("n","");
-                    let cleanT = userTip.toLowerCase().replace("p","").replace("n","");
-                    let [rh, ra] = cleanR.split(":").map(Number);
-                    let [th, ta] = cleanT.split(":").map(Number);
-
+                    let ptsToAdd = 0, cleanR = r.toLowerCase().replace("p","").replace("n",""), cleanT = userTip.toLowerCase().replace("p","").replace("n","");
+                    let [rh, ra] = cleanR.split(":").map(Number), [th, ta] = cleanT.split(":").map(Number);
                     if(r.toLowerCase() === userTip.toLowerCase()) ptsToAdd = 3;
                     else if((rh > ra && th > ta) || (rh < ra && th < ta)) ptsToAdd = 1;
-                    
                     if(ptsToAdd > 0) set(ref(db, `points/${pid}`), (points[pid] || 0) + ptsToAdd);
                 }
             });
@@ -245,17 +225,14 @@
         if(!n) return; localStorage.setItem("pName", n);
         let t = prompt("Tip (2:1, 2:1p, 2:1n):", tips[pId]?.tips?.[id] || "");
         if(t && t.includes(":")) {
-            let cleanT = t.toLowerCase().replace("p","").replace("n","");
-            let [th, ta] = cleanT.split(":").map(Number);
+            let [th, ta] = t.toLowerCase().replace("p","").replace("n","").split(":").map(Number);
             if(th === ta) return alert("Remízy nejsou povoleny!");
-            set(ref(db, `tips/${pId}/name`), n); 
-            set(ref(db, `tips/${pId}/tips/${id}`), t); 
+            set(ref(db, `tips/${pId}/name`), n); set(ref(db, `tips/${pId}/tips/${id}`), t); 
         }
     };
 
     onValue(ref(db, "/"), snap => {
-        const d = snap.val() || {};
-        const mData = d.matches || {};
+        const d = snap.val() || {}, mData = d.matches || {};
         matches = Object.keys(mData).map(id => ({id, ...mData[id]}));
         tips = d.tips || {}; points = d.points || {};
         
@@ -292,8 +269,7 @@
                 <div style="display:flex; gap:5px; flex-wrap:wrap; justify-content: flex-end;">
                     <button onclick="window.addExtraPoints('${id}', '${name}')" style="background:#0ea5e9; padding:5px 10px; font-size:11px;">Body +/-</button>
                     <button onclick="window.clearPlayerPoints('${id}', '${name}')" style="background:#f59e0b; padding:5px 10px; font-size:11px;">Vynulovat</button>
-                    <button onclick="window.deletePlayerTips('${id}', '${name}')" class="danger" style="padding:5px 10px; font-size:11px;">Smazat tipy</button>
-                    <button onclick="window.fullDeletePlayer('${id}', '${name}')" class="danger" style="padding:5px 10px; font-size:11px; background:#450a0a !important;">Smazat hráče</button>
+                    <button onclick="window.fullDeletePlayer('${id}', '${name}')" class="danger" style="padding:5px 10px; font-size:11px;">Smazat</button>
                 </div>
             </div>`;
         });
