@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tipovačka Pro</title>
+    <title>Tipovačka</title>
     <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/4242/4242098.png" type="image/png">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/4242/4242098.png">
     <style>
@@ -110,7 +110,8 @@
             <button onclick="document.getElementById('adminPanel').style.display='none'" style="background:#475569">Zavřít</button>
             <button onclick="window.addMatch()" style="background:#059669">Přidat zápas</button>
         </div>
-        <div style="margin-top:20px; display:flex; justify-content:center; gap:10px;">
+        <div style="margin-top:20px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
+            <button onclick="window.clearMatchesOnly()" style="background:#f59e0b">Nová kola (Smazat zápasy a tipy)</button>
             <button onclick="window.clearAllTips()" class="danger">Smazat VŠE (Reset databáze)</button>
         </div>
         <hr style="border:0; border-top:1px solid #334155; margin:20px 0;">
@@ -189,7 +190,6 @@
     window.toggleMatch = (id, state) => update(ref(db, `matches/${id}`), {closed: state});
     window.delMatch = (id) => { if(confirm("Smazat zápas? Body zůstávají.")) remove(ref(db, `matches/${id}`)); };
     
-    // FUNKCE SPRÁVY HRÁČŮ
     window.addExtraPoints = async (id, name) => {
         let val = prompt(`Upravit body hráči ${name} (např. 5 nebo -5):`);
         if(val !== null && !isNaN(val)) {
@@ -200,7 +200,23 @@
     window.clearPlayerPoints = (id, name) => { if(confirm(`Vynulovat body hráči ${name}?`)) set(ref(db, `points/${id}`), 0); };
     window.deletePlayerTips = (id, name) => { if(confirm(`Smazat tipy hráči ${name}?`)) remove(ref(db, `tips/${id}/tips`)); };
     window.fullDeletePlayer = (id, name) => { if(confirm(`Smazat úplně hráče ${name}?`)) { remove(ref(db, `tips/${id}`)); remove(ref(db, `points/${id}`)); }};
-    window.clearAllTips = () => { if(confirm("Smazat VŠE z databáze?")) { remove(ref(db, "matches")); remove(ref(db, "tips")); remove(ref(db, "points")); }};
+    
+    // RESETOVACÍ FUNKCE
+    window.clearAllTips = () => { if(confirm("Smazat VŠE z databáze? (Body, Hráči, Zápasy zmizí)")) { remove(ref(db, "matches")); remove(ref(db, "tips")); remove(ref(db, "points")); }};
+    
+    window.clearMatchesOnly = async () => {
+        if(confirm("Opravdu smazat všechny zápasy a tipy? Body a jména hráčů ZŮSTANOU.")) {
+            remove(ref(db, "matches"));
+            // Smažeme pouze větev 'tips' u všech hráčů, ale ponecháme 'name'
+            const tipsSnap = await get(ref(db, "tips"));
+            if(tipsSnap.exists()){
+                const allTips = tipsSnap.val();
+                Object.keys(allTips).forEach(pid => {
+                    remove(ref(db, `tips/${pid}/tips`));
+                });
+            }
+        }
+    };
 
     window.setRes = async (id) => {
         let r = prompt("Konečný výsledek (3:1, 2:1p, 3:2n):");
@@ -275,7 +291,7 @@
                 <span><b>${name}</b> (${points[id]||0} b.)</span>
                 <div style="display:flex; gap:5px; flex-wrap:wrap; justify-content: flex-end;">
                     <button onclick="window.addExtraPoints('${id}', '${name}')" style="background:#0ea5e9; padding:5px 10px; font-size:11px;">Body +/-</button>
-                    <button onclick="window.clearPlayerPoints('${id}', '${name}')" style="background:#f59e0b; padding:5px 10px; font-size:11px;">Smazat body</button>
+                    <button onclick="window.clearPlayerPoints('${id}', '${name}')" style="background:#f59e0b; padding:5px 10px; font-size:11px;">Vynulovat</button>
                     <button onclick="window.deletePlayerTips('${id}', '${name}')" class="danger" style="padding:5px 10px; font-size:11px;">Smazat tipy</button>
                     <button onclick="window.fullDeletePlayer('${id}', '${name}')" class="danger" style="padding:5px 10px; font-size:11px; background:#450a0a !important;">Smazat hráče</button>
                 </div>
