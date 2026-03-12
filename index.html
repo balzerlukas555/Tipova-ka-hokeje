@@ -285,8 +285,15 @@
                 if(!m) return;
                 let t = tips[id].tips?.[i] || "-";
                 let cls = "";
-                if(m.result?.includes(":") && t !== "-") {
-                    let [rh, ra] = m.result.split(":").map(Number), [th, ta] = t.split(":").map(Number);
+                
+                // BARVENÍ PODLE LIVE NEBO RESULTU
+                let currentScore = m.live || (m.result !== "-" ? m.result : null);
+
+                if(currentScore && currentScore.includes(":") && t !== "-") {
+                    // Očistíme skóre od případných textů v závorce (např. 0:0 (T2) -> 0:0)
+                    let cleanScore = currentScore.split(" ")[0];
+                    let [rh, ra] = cleanScore.split(":").map(Number), [th, ta] = t.split(":").map(Number);
+                    
                     if(rh===th && ra===ta) cls = "tip-exact";
                     else if((rh>ra && th>ta) || (rh<ra && th<ta) || (rh===ra && th===ta)) cls = "tip-tendency";
                 }
