@@ -4,7 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tipovačka</title>
+    
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/4242/4242141.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="https://cdn-icons-png.flaticon.com/512/4242/4242141.png">
     <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/4242/4242098.png" type="image/png">
+    <meta name="theme-color" content="#0f172a">
     
     <style>
         /* INTRO */
@@ -231,25 +235,41 @@
         const table = document.getElementById("playersTable");
         let sortedIds = Object.keys(tips).sort((a,b) => (points[b]||0) - (points[a]||0));
         let activeMatches = Object.keys(matches).filter(id => matches[id].phase !== 'archived');
-        let h = "<thead><tr><th>Hráč</th><th>Body</th>" + activeMatches.map((_,i) => `<th>Z${i+1}</th>`).join('') + "</tr></thead><tbody>";
+        
+        let headerHtml = "<thead><tr><th>Hráč</th><th>Body</th>";
+        activeMatches.forEach(mid => {
+            const m = matches[mid];
+            const hName = (m.home || "T1").trim().substring(0, 3);
+            const aName = (m.away || "T2").trim().substring(0, 3);
+            headerHtml += `<th>${hName} vs ${aName}</th>`;
+        });
+        headerHtml += "</tr></thead>";
+
+        let bodyHtml = "<tbody>";
         sortedIds.forEach(pid => {
-            h += `<tr class="${pid===pId?'my-row':''}">
+            bodyHtml += `<tr class="${pid===pId?'my-row':''}">
                 <td data-label="Hráč"><b>${tips[pid].name}</b></td>
                 <td data-label="Body"><b>${points[pid]||0}</b></td>`;
+            
             activeMatches.forEach(mid => {
+                const m = matches[mid];
+                const hName = (m.home || "T1").trim().substring(0, 3);
+                const aName = (m.away || "T2").trim().substring(0, 3);
+                
                 let t = tips[pid].tips?.[mid] || "-";
-                let cls = "", m = matches[mid], score = (m.phase === 'live' ? m.live : (m.result !== "-" ? m.result : null));
+                let cls = "", score = (m.phase === 'live' ? m.live : (m.result !== "-" ? m.result : null));
+                
                 if(score && score.includes(":") && t !== "-") {
                     let cleanRes = score.split(" ")[0];
                     let [rh, ra] = cleanRes.split(":").map(Number), [th, ta] = t.split(":").map(Number);
                     if(rh===th && ra===ta) cls = "tip-exact";
                     else if((rh>ra && th>ta) || (rh<ra && th<ta) || (rh===ra && th===ta)) cls = "tip-tendency";
                 }
-                h += `<td data-label="Z${activeMatches.indexOf(mid)+1}" class="${cls}">${t}</td>`;
+                bodyHtml += `<td data-label="${hName} vs ${aName}" class="${cls}">${t}</td>`;
             });
-            h += "</tr>";
+            bodyHtml += "</tr>";
         });
-        table.innerHTML = h + "</tbody>";
+        table.innerHTML = headerHtml + bodyHtml + "</tbody>";
     }
 </script>
 </body>
