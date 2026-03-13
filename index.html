@@ -241,7 +241,11 @@
             const m = matches[mid];
             const hName = (m.home || "T1").trim().substring(0, 3);
             const aName = (m.away || "T2").trim().substring(0, 3);
-            headerHtml += `<th>${hName} vs ${aName}</th>`;
+            
+            // Vezme datum a vytáhne jen část před mezerou
+            const dateOnly = m.date ? m.date.split(" ")[0] : "";
+            
+            headerHtml += `<th>${hName} vs ${aName}<br><span style="font-size:10px; color:#94a3b8; font-weight:normal;">${dateOnly}</span></th>`;
         });
         headerHtml += "</tr></thead>";
 
@@ -255,6 +259,7 @@
                 const m = matches[mid];
                 const hName = (m.home || "T1").trim().substring(0, 3);
                 const aName = (m.away || "T2").trim().substring(0, 3);
+                const dateOnly = m.date ? m.date.split(" ")[0] : "";
                 
                 let t = tips[pid].tips?.[mid] || "-";
                 let cls = "", score = (m.phase === 'live' ? m.live : (m.result !== "-" ? m.result : null));
@@ -265,7 +270,7 @@
                     if(rh===th && ra===ta) cls = "tip-exact";
                     else if((rh>ra && th>ta) || (rh<ra && th<ta) || (rh===ra && th===ta)) cls = "tip-tendency";
                 }
-                bodyHtml += `<td data-label="${hName} vs ${aName}" class="${cls}">${t}</td>`;
+                bodyHtml += `<td data-label="${hName}-${aName} (${dateOnly})" class="${cls}">${t}</td>`;
             });
             bodyHtml += "</tr>";
         });
