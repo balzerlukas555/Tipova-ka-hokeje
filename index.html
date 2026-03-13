@@ -7,7 +7,7 @@
     <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/4242/4242098.png" type="image/png">
     
     <style>
-        /* --- SEKCE: STYLOVÉ INTRO --- */
+        /* --- SEKCE: STYLOVÉ INTRO (Logo a text při načtení) --- */
         #intro { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: #0f172a; display: flex; flex-direction: column; align-items: center; justify-content: center; 
@@ -16,10 +16,10 @@
         #intro.hidden { opacity: 0; visibility: hidden; }
         .intro-container { text-align: center; animation: introPulse 2s infinite ease-in-out; }
         .logo-intro { width: 100px; filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.5)); margin-bottom: 15px; }
-        .intro-text { color: white; font-size: 24px; font-weight: 900; letter-spacing: 6px; text-transform: uppercase; text-shadow: 0 0 10px rgba(59, 130, 246, 0.8); margin: 0; font-family: 'Segoe UI', sans-serif; }
+        .intro-text { color: white; font-size: 24px; font-weight: 900; letter-spacing: 6px; text-transform: uppercase; text-shadow: 0 0 10px rgba(59, 130, 246, 0.8); margin: 0; }
         @keyframes introPulse { 0%, 100% { transform: scale(1); opacity: 0.9; } 50% { transform: scale(1.05); opacity: 1; } }
         
-        /* --- SEKCE: ZÁKLADNÍ DESIGN WEBU --- */
+        /* --- SEKCE: GLOBÁLNÍ STYLY --- */
         body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; text-align: center; margin: 0; padding: 10px; line-height: 1.5; }
         h1 { color: #3b82f6; margin: 15px 0; }
         .menu-bar { margin: 20px 0; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
@@ -41,7 +41,7 @@
         .match-info { color: #94a3b8; font-size: 13px; display: block; }
         .match-status { color: #3b82f6; font-size: 14px; font-weight: bold; margin: 5px 0; display: block; }
 
-        /* --- SEKCE: TABULKA VÝSLEDKŮ --- */
+        /* --- SEKCE: TABULKA VÝSLEDKŮ (Desktop i Mobil) --- */
         .tableWrap { width: 100%; max-width: 1000px; margin: 20px auto; overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; background: #1e293b; border-radius: 10px; overflow: hidden; }
         th, td { padding: 12px; border-bottom: 1px solid #334155; text-align: center; }
@@ -49,7 +49,7 @@
         .tip-tendency { background: #854d0e !important; color: #fde047 !important; }
         .my-row { border: 2px solid #3b82f6 !important; background: #1e294b !important; }
 
-        /* --- SEKCE: MOBILNÍ ZOBRAZENÍ TABULKY --- */
+        /* --- MOBILNÍ ZOBRAZENÍ (Karty místo řádků) --- */
         @media (max-width: 600px) {
             thead { display: none; }
             tr { display: block; margin-bottom: 15px; border: 1px solid #334155; border-radius: 10px; padding: 10px; background: #1e293b; }
@@ -60,6 +60,7 @@
         /* --- SEKCE: ADMIN PANEL --- */
         .admin { background: #111827; padding: 20px; display: none; border-radius: 12px; max-width: 650px; margin: 20px auto; border: 2px dashed #ef4444; box-sizing: border-box; }
         .admin-item, .player-item { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #444; }
+        .player-item { display: flex; justify-content: space-between; align-items: center; }
         input { padding: 10px; margin: 5px; border-radius: 8px; background: #0f172a; color: white; border: 1px solid #475569; width: 85%; }
 
         /* --- SEKCE: ARCHIV --- */
@@ -95,20 +96,24 @@
 
     <div id="adminPanel" class="admin">
         <h2>Admin Panel</h2>
-        <button onclick="window.addMatch()" class="success">Přidat zápas</button>
-        <button onclick="window.clearAllData()" class="danger">Smazat vše</button>
-        <button onclick="document.getElementById('adminPanel').style.display='none'" class="btn-alt">Zavřít</button>
+        <div style="margin-bottom:20px; display:flex; gap:10px; justify-content:center;">
+            <button onclick="window.addMatch()" class="success">Přidat zápas</button>
+            <button onclick="window.clearAllData()" class="danger">Smazat vše</button>
+            <button onclick="document.getElementById('adminPanel').style.display='none'" class="btn-alt">Zavřít</button>
+        </div>
+        <hr>
         <h3>Správa hráčů</h3><div id="adminPlayers"></div>
+        <hr>
         <h3>Správa zápasů</h3><div id="adminMatches"></div>
+        <hr>
         <h3>Správa archivu</h3><div id="adminArchive"></div>
     </div>
 
 <script type="module">
-    // (MODUL: Importy Firebase)
+    // --- DATABASE IMPORT ---
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase, ref, set, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    // (MODUL: Konfigurace databáze)
     const firebaseConfig = {
         apiKey: "AIzaSyC2xPE4YnIanTiRgrwsoXgoclTyOq0BraE",
         authDomain: "tipovacka-fce0e.firebaseapp.com",
@@ -121,39 +126,40 @@
     let matches = {}, tips = {}, points = {}, pId = localStorage.getItem("pId") || "p"+Math.random().toString(16).slice(2);
     localStorage.setItem("pId", pId);
 
-    // (FUNKCE: Skrytí intra po načtení)
+    // --- INTRO TIMER ---
     window.addEventListener('load', () => setTimeout(() => document.getElementById('intro').classList.add('hidden'), 1800));
     
-    // (FUNKCE: Admin přístup)
+    // --- ADMIN LOGIN ---
     window.adminLogin = () => { if (prompt("Heslo:") === "Acsparta333") document.getElementById("adminPanel").style.display = "block"; };
 
-    // (FUNKCE: Moderace hráčů)
+    // --- PLAYER MGMT ---
     window.addExtraPoints = (id, name) => {
-        let val = prompt(`Body pro ${name}:`, "0");
+        let val = prompt(`Přidat/odebrat body hráči ${name}:`, "0");
         if(val !== null) set(ref(db, `points/${id}`), (points[id] || 0) + parseInt(val));
     };
-    window.fullDeletePlayer = (id) => { if(confirm("Smazat hráče?")) { remove(ref(db, `tips/${id}`)); remove(ref(db, `points/${id}`)); }};
+    window.fullDeletePlayer = (id) => { if(confirm("Smazat hráče z DB?")) { remove(ref(db, `tips/${id}`)); remove(ref(db, `points/${id}`)); }};
 
-    // (FUNKCE: Správa zápasů)
+    // --- MATCH MGMT ---
     window.addMatch = () => {
         const id = Date.now();
         set(ref(db, `matches/${id}`), { home:"Tým 1", away:"Tým 2", date:"12.3. 18:00", desc:"Zápas", phase: "planned", live: "0:0 (T1)", result: "-", closed: false });
     };
     window.updateMatch = (id, field, val) => update(ref(db, `matches/${id}`), { [field]: val });
-    window.deleteMatch = (id) => { if(confirm("Smazat?")) remove(ref(db, `matches/${id}`)); };
+    window.deleteMatch = (id) => { if(confirm("Smazat zápas?")) remove(ref(db, `matches/${id}`)); };
+    window.clearAllData = () => { if(confirm("VYMAZAT KOMPLETNÍ DATABÁZI?")) remove(ref(db, "/")); };
 
-    // (FUNKCE: Logika fází zápasu - OPRAVA LIVE SCORE)
+    // --- LIVE & PHASE LOGIC (Opraveno propisování Live stavu) ---
     window.handlePhase = (id, phase) => {
         if (phase === 'planned') update(ref(db, `matches/${id}`), { phase: 'live', closed: true });
         else if (phase === 'live') {
-            let res = prompt("Konečný výsledek (např. 2:1):");
+            let res = prompt("Konečný výsledek (např. 3:2):");
             if (res) update(ref(db, `matches/${id}`), { phase: 'ended', result: res, live: "" });
         } else if (phase === 'ended') {
-            if(confirm("Do archivu?")) update(ref(db, `matches/${id}`), { phase: 'archived' });
+            if(confirm("Přesunout do archivu?")) update(ref(db, `matches/${id}`), { phase: 'archived' });
         }
     };
 
-    // (FUNKCE: Uživatelské akce)
+    // --- USER ACTIONS ---
     window.toggleArchive = () => { const s = document.getElementById("archiveSection"); s.style.display = s.style.display === "block" ? "none" : "block"; };
     window.changeName = () => { let n = prompt("Tvé jméno:"); if(n) { localStorage.setItem("pName", n.trim()); set(ref(db, `tips/${pId}/name`), n.trim()); }};
     
@@ -164,7 +170,7 @@
         if(t && t.includes(":")) { set(ref(db, `tips/${pId}/name`), n); set(ref(db, `tips/${pId}/tips/${id}`), t); }
     };
 
-    // (DATABÁZE: Hlavní poslech dat a vykreslování)
+    // --- MAIN RENDER LOOP ---
     onValue(ref(db, "/"), snap => {
         const d = snap.val() || {};
         matches = d.matches || {}; tips = d.tips || {}; points = d.points || {};
@@ -173,13 +179,13 @@
         
         mDiv.innerHTML = ""; arcList.innerHTML = ""; adMatches.innerHTML = ""; adPlayers.innerHTML = ""; adArchive.innerHTML = "";
 
-        // (VYKRESLOVÁNÍ: Admin sekce hráčů)
+        // Admin: Hráči
         Object.keys(tips).forEach(id => {
             const name = tips[id].name || "Neznámý";
-            adPlayers.innerHTML += `<div class="player-item"><b>${name}</b> (${points[id]||0} b.) <button onclick="window.addExtraPoints('${id}','${name}')">+/- Body</button> <button class="danger" onclick="window.fullDeletePlayer('${id}')">X</button></div>`;
+            adPlayers.innerHTML += `<div class="player-item"><span><b>${name}</b> (${points[id]||0} b.)</span><div><button onclick="window.addExtraPoints('${id}','${name}')">+/- Body</button> <button class="danger" onclick="window.fullDeletePlayer('${id}')">X</button></div></div>`;
         });
 
-        // (VYKRESLOVÁNÍ: Zápasy a Archiv)
+        // Zápasy & Archiv
         Object.keys(matches).sort().reverse().forEach(id => {
             const m = matches[id];
             if (m.phase !== 'archived') {
@@ -187,28 +193,28 @@
                 const hasTipped = tips[pId]?.tips?.[id];
                 const btnLabel = hasTipped ? "Upravit tip" : "Tipovat";
 
-                // Uživatelská karta zápasu
+                // Uživatelské zobrazení
                 mDiv.innerHTML += `<div class="match">${m.phase==='live'?'<span class="live-badge">LIVE</span>':''}<span class="match-info">${m.desc}</span><span class="match-status">${st}</span><h2>${m.home} - ${m.away}</h2>${m.phase!=='planned'?`<p>${m.phase==='live'?'Aktuální stav':'Výsledek'}: <b>${m.phase==='live'?m.live:m.result}</b></p>`:''}<button onclick="window.sendTip('${id}')" ${m.closed?'disabled':''}>${m.closed?'Zavřeno':btnLabel}</button></div>`;
                 
-                // Admin ovládání zápasu (Zde opraveno propisování Live stavu)
+                // Admin zobrazení
                 let btnTxt = m.phase==='planned' ? "Začít" : (m.phase==='live' ? "Ukončit" : "Archivovat");
-                adMatches.innerHTML += `<div class="admin-item"><input onchange="window.updateMatch('${id}','desc',this.value)" value="${m.desc}"><div style="display:flex;"><input style="width:45%" onchange="window.updateMatch('${id}','home',this.value)" value="${m.home}"><input style="width:45%" onchange="window.updateMatch('${id}','away',this.value)" value="${m.away}"></div>${m.phase==='live'?`<input placeholder="Live stav" onchange="window.updateMatch('${id}','live',this.value)" value="${m.live}">`:''}<br><button class="success" onclick="window.handlePhase('${id}','${m.phase}')">${btnTxt}</button> <button class="btn-alt" onclick="window.updateMatch('${id}','closed',${!m.closed})">${m.closed?'Otevřít':'Zavřít'}</button> <button class="danger" onclick="window.deleteMatch('${id}')">Smazat</button></div>`;
+                adMatches.innerHTML += `<div class="admin-item"><input onchange="window.updateMatch('${id}','desc',this.value)" value="${m.desc}"><div style="display:flex; gap:5px;"><input style="width:45%" onchange="window.updateMatch('${id}','home',this.value)" value="${m.home}"><input style="width:45%" onchange="window.updateMatch('${id}','away',this.value)" value="${m.away}"></div>${m.phase==='live'?`<input placeholder="Průběžný stav (Live)" onchange="window.updateMatch('${id}','live',this.value)" value="${m.live}">`:''}<div style="margin-top:10px;"><button class="success" onclick="window.handlePhase('${id}','${m.phase}')">${btnTxt}</button> <button class="btn-alt" onclick="window.updateMatch('${id}','closed',${!m.closed})">${m.closed?'Otevřít':'Zavřít'}</button> <button class="danger" onclick="window.deleteMatch('${id}')">Smazat</button></div></div>`;
             } else {
-                arcList.innerHTML += `<div style="padding:10px; border-bottom:1px solid #334155;">${m.home} vs ${m.away} <b>${m.result}</b></div>`;
+                arcList.innerHTML += `<div style="padding:10px; border-bottom:1px solid #334155;">${m.home} vs ${m.away} | <b>${m.result}</b></div>`;
                 adArchive.innerHTML += `<div class="player-item">${m.home}-${m.away} <button class="danger" onclick="window.deleteMatch('${id}')">Smazat</button></div>`;
             }
         });
         renderTable();
     });
 
-    // (FUNKCE: Generování tabulky a výpočet barev tipů)
+    // --- TABLE GENERATOR ---
     function renderTable() {
         const table = document.getElementById("playersTable");
         let sortedIds = Object.keys(tips).sort((a,b) => (points[b]||0) - (points[a]||0));
         let activeMatches = Object.keys(matches).filter(id => matches[id].phase !== 'archived');
         let h = "<thead><tr><th>Hráč</th><th>Body</th>" + activeMatches.map((_,i) => `<th>Z${i+1}</th>`).join('') + "</tr></thead><tbody>";
         sortedIds.forEach(pid => {
-            h += `<tr class="${pid===pId?'my-row':''}"><td><b>${tips[pid].name}</b></td><td><b>${points[pid]||0}</b></td>`;
+            h += `<tr class="${pid===pId?'my-row':''}"><td data-label="Hráč"><b>${tips[pid].name}</b></td><td data-label="Body"><b>${points[pid]||0}</b></td>`;
             activeMatches.forEach(mid => {
                 let t = tips[pid].tips?.[mid] || "-", cls = "", m = matches[mid], score = (m.phase==='live'?m.live:(m.result!=="-"?m.result:null));
                 if(score && score.includes(":") && t !== "-") {
@@ -216,7 +222,7 @@
                     if(rh===th && ra===ta) cls = "tip-exact";
                     else if((rh>ra && th>ta) || (rh<ra && th<ta) || (rh===ra && th===ta)) cls = "tip-tendency";
                 }
-                h += `<td data-label="Z" class="${cls}">${t}</td>`;
+                h += `<td data-label="Z${activeMatches.indexOf(mid)+1}" class="${cls}">${t}</td>`;
             });
             h += "</tr>";
         });
