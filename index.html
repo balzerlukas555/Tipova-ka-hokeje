@@ -10,33 +10,41 @@
     <meta name="theme-color" content="#0f172a">
     
     <style>
-        /* ZACHOVÁNÍ STYLU */
         #intro { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f172a; display: flex; align-items: center; justify-content: center; z-index: 9999; transition: opacity 0.8s; }
         #intro.hidden { opacity: 0; visibility: hidden; }
-        .logo-intro { width: 120px; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { transform: scale(0.9); opacity: 0.7; } 50% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(0.9); opacity: 0.7; } }
+        .logo-intro { width: 120px; }
         
         body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; text-align: center; margin: 0; padding: 10px; }
-        h1 { color: #3b82f6; }
+        h1 { color: #3b82f6; margin-bottom: 5px; }
         
-        /* ADMIN ROZŠÍŘENÍ */
-        .admin { background: #111827; padding: 15px; display: none; border-radius: 12px; max-width: 800px; margin: 20px auto; border: 2px dashed #ef4444; }
-        .admin-section { background: #1e293b; padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: left; }
-        .admin-item { background: #0f172a; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #334155; }
-        
-        input, select { padding: 8px; border-radius: 6px; background: #0f172a; color: white; border: 1px solid #334155; margin: 5px 0; width: 100%; box-sizing: border-box; }
-        button { padding: 10px 15px; border: none; border-radius: 8px; background: #3b82f6; color: white; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        button:hover { opacity: 0.8; }
-        .btn-danger { background: #991b1b; }
-        .btn-success { background: #059669; }
-        .btn-alt { background: #475569; }
+        .wallet-card { background: #1e294b; border: 2px solid #3b82f6; border-radius: 12px; padding: 15px; margin: 10px auto; max-width: 400px; }
+        .balance-val { font-size: 24px; color: #6ee7b7; font-weight: bold; }
 
-        /* TABULKA A ZÁPASY (Stejný styl) */
-        .match { background: #1e293b; padding: 15px; border-radius: 12px; margin: 10px auto; max-width: 450px; border: 1px solid #334155; }
-        .group-header { background: #3b82f6; color: white; padding: 10px; border-radius: 8px; margin: 20px auto; max-width: 450px; font-weight: bold; cursor: pointer; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #1e293b; border-radius: 10px; overflow: hidden; }
-        th, td { padding: 10px; border-bottom: 1px solid #334155; }
+        /* SKUPINY */
+        .group-container { margin: 20px auto; max-width: 500px; text-align: left; }
+        .group-header { background: #1e293b; border-left: 4px solid #3b82f6; padding: 12px; margin-bottom: 5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: bold; border-radius: 4px; }
+        .group-content { display: block; margin-bottom: 20px; }
+        .group-content.collapsed { display: none; }
+
+        /* ZÁPASY */
+        .match { background: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #334155; position: relative; }
+        .match-header { font-size: 12px; color: #94a3b8; margin-bottom: 8px; display: flex; justify-content: space-between; }
+        .status-badge { color: #3b82f6; font-weight: bold; }
+        .teams { font-size: 18px; font-weight: bold; margin: 10px 0; }
+        .live-score { background: #991b1b; padding: 2px 6px; border-radius: 4px; font-size: 14px; margin-left: 5px; }
+
+        /* TABULKA */
+        .table-wrap { overflow-x: auto; margin: 20px auto; max-width: 900px; }
+        table { width: 100%; background: #1e293b; border-radius: 10px; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 12px; border-bottom: 1px solid #334155; text-align: center; }
+        .my-row { background: #1e294b; border: 1px solid #3b82f6; }
+
+        /* ADMIN */
+        .admin { background: #111827; padding: 15px; display: none; border-radius: 12px; max-width: 800px; margin: 20px auto; border: 2px dashed #ef4444; text-align: left; }
+        .admin-section { background: #1e293b; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
+        input, select { padding: 8px; border-radius: 6px; background: #0f172a; color: white; border: 1px solid #334155; margin: 5px 0; width: 100%; box-sizing: border-box; }
+        button { padding: 10px 15px; border: none; border-radius: 8px; background: #3b82f6; color: white; font-weight: bold; cursor: pointer; }
+        .btn-danger { background: #991b1b; } .btn-success { background: #059669; } .btn-alt { background: #475569; }
     </style>
 </head>
 <body>
@@ -45,42 +53,43 @@
 
     <h1>Tipovačka</h1>
     
-    <div id="userStats" style="margin-bottom: 15px; font-weight: bold; color: #6ee7b7;">
-        Peněženka: <span id="myBalance">2000</span> Tip-coinů
+    <div class="wallet-card">
+        <div>Moje peněženka</div>
+        <div class="balance-val"><span id="myBalance">2000</span> TC</div>
     </div>
 
-    <div id="matchesContainer">
+    <div id="mainContent">
+        <div id="matchesContainer">Načítám zápasy...</div>
+        
+        <h2>Žebříček sázkařů</h2>
+        <div class="table-wrap">
+            <table id="playersTable"></table>
         </div>
+    </div>
 
     <div id="adminPanel" class="admin">
-        <h2>Admin Panel 2.0</h2>
+        <h2 style="text-align:center">Admin Panel 2.0</h2>
         
         <div class="admin-section">
-            <h3>1. Správa skupin</h3>
-            <div style="display: flex; gap: 5px;">
-                <input id="newGroupName" placeholder="Název skupiny (např. 1. kolo)">
-                <button onclick="window.addGroup()" class="btn-success">Vytvořit</button>
-            </div>
-            <div id="adminGroupsList" style="margin-top: 10px;"></div>
+            <h3>Správa skupin</h3>
+            <div style="display:flex; gap:5px;"><input id="newGroupName" placeholder="Název skupiny"><button onclick="window.addGroup()" class="btn-success">Vytvořit</button></div>
+            <div id="adminGroupsList" style="margin-top:10px;"></div>
         </div>
 
         <div class="admin-section">
-            <h3>2. Správa zápasů</h3>
-            <button onclick="window.addMatch()" class="btn-success" style="width:100%">+ Přidat nový zápas</button>
-            <div id="adminMatchesList" style="margin-top: 10px;"></div>
+            <h3>Správa zápasů</h3>
+            <button onclick="window.addMatch()" class="btn-success" style="width:100%">+ Přidat zápas</button>
+            <div id="adminMatchesList" style="margin-top:10px;"></div>
         </div>
 
         <div class="admin-section">
-            <h3>3. Moderace hráčů</h3>
+            <h3>Moderace hráčů</h3>
             <div id="adminPlayersList"></div>
         </div>
-
-        <button onclick="document.getElementById('adminPanel').style.display='none'" class="btn-alt" style="width: 100%">Zavřít Admin Panel</button>
+        <button onclick="document.getElementById('adminPanel').style.display='none'" class="btn-alt" style="width:100%">Zavřít</button>
     </div>
 
-    <div style="margin-top: 20px;">
-        <button onclick="window.adminLogin()" class="btn-alt">Admin sekce</button>
-    </div>
+    <div style="margin: 20px 0;"><button onclick="window.adminLogin()" class="btn-alt">Admin sekce</button></div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -98,121 +107,132 @@
     let state = { matches: {}, groups: {}, players: {}, pId: localStorage.getItem("pId") || "p"+Math.random().toString(16).slice(2) };
     localStorage.setItem("pId", state.pId);
 
-    // INTRO
-    window.addEventListener('load', () => setTimeout(() => document.getElementById('intro').classList.add('hidden'), 1500));
+    window.addEventListener('load', () => setTimeout(() => document.getElementById('intro').classList.add('hidden'), 1200));
     window.adminLogin = () => { if (prompt("Heslo:") === "Acsparta333") document.getElementById("adminPanel").style.display = "block"; };
 
-    // --- LOGIKA SKUPIN ---
+    // --- ADMIN FUNKCE ---
     window.addGroup = () => {
-        const name = document.getElementById("newGroupName").value;
-        if (!name) return;
-        const id = "g" + Date.now();
-        set(ref(db, `groups/${id}`), { name: name, order: Object.keys(state.groups).length, arch: false });
-        document.getElementById("newGroupName").value = "";
+        const n = document.getElementById("newGroupName").value;
+        if(n) set(ref(db, `groups/g${Date.now()}`), { name: n, order: Date.now() });
     };
-    window.deleteGroup = (id) => { if(confirm("Smazat skupinu? Zápasy zůstanou, ale nebudou mít kategorii.")) remove(ref(db, `groups/${id}`)); };
-
-    // --- LOGIKA ZÁPASŮ ---
-    window.addMatch = () => {
-        const id = "m" + Date.now();
-        set(ref(db, `matches/${id}`), { 
-            home: "Tým A", away: "Tým B", group: "none", status: "Plánováno", 
-            score: "0:0", result: "-", closed: false, date: "1.1. 18:00" 
-        });
-    };
+    window.deleteGroup = (id) => remove(ref(db, `groups/${id}`));
+    window.addMatch = () => set(ref(db, `matches/m${Date.now()}`), { home:"Tým A", away:"Tým B", date:"1.1. 18:00", group:"none", status:"Plánováno", score:"0:0", closed:false });
     window.updateMatch = (id, field, val) => update(ref(db, `matches/${id}`), { [field]: val });
-    window.deleteMatch = (id) => { if(confirm("Smazat zápas?")) remove(ref(db, `matches/${id}`)); };
+    window.deleteMatch = (id) => confirm("Smazat?") && remove(ref(db, `matches/${id}`));
+    window.modPlayer = (id, field, val) => update(ref(db, `tips/${id}`), { [field]: val });
 
-    // --- LOGIKA HRÁČŮ ---
-    window.modPlayerBalance = (id, amount) => {
-        const current = state.players[id]?.balance || 2000;
-        update(ref(db, `tips/${id}`), { balance: current + parseInt(amount) });
+    // --- SÁZECÍ LOGIKA ---
+    window.placeBet = (mId) => {
+        const pName = localStorage.getItem("pName") || prompt("Tvé jméno:");
+        if(!pName) return; localStorage.setItem("pName", pName);
+        
+        const m = state.matches[mId];
+        const currentBal = state.players[state.pId]?.balance || 2000;
+        
+        const tip = prompt(`Tvůj tip na skóre (např. 3:2):`);
+        if(!tip || !tip.includes(":")) return;
+
+        const stake = parseInt(prompt(`Kolik vsázíš? (Máš ${currentBal} TC):`));
+        if(isNaN(stake) || stake <= 0 || stake > currentBal) { alert("Neplatná částka!"); return; }
+
+        update(ref(db, `tips/${state.pId}`), { 
+            name: pName, 
+            balance: currentBal - stake
+        });
+        set(ref(db, `tips/${state.pId}/bets/${mId}`), { tip, stake });
     };
-    window.deletePlayer = (id) => { if(confirm("Smazat hráče kompletně?")) remove(ref(db, `tips/${id}`)); };
 
-    // --- HLAVNÍ SYNCHRONIZACE ---
+    // --- SYNCHRONIZACE ---
     onValue(ref(db, "/"), snap => {
-        const data = snap.val() || {};
-        state.matches = data.matches || {};
-        state.groups = data.groups || {};
-        state.players = data.tips || {};
-
-        renderAdmin();
-        renderMain();
+        const d = snap.val() || {};
+        state.matches = d.matches || {}; state.groups = d.groups || {}; state.players = d.tips || {};
+        renderAdmin(); renderMain();
     });
 
     function renderAdmin() {
-        // Admin Skupiny
-        const gList = document.getElementById("adminGroupsList");
-        gList.innerHTML = "";
+        const gList = document.getElementById("adminGroupsList"); gList.innerHTML = "";
         Object.keys(state.groups).forEach(id => {
-            gList.innerHTML += `<div class="admin-item" style="display:flex; justify-content:space-between;">
-                <span>${state.groups[id].name}</span>
-                <button onclick="window.deleteGroup('${id}')" class="btn-danger" style="padding:2px 8px;">Smazat</button>
-            </div>`;
+            gList.innerHTML += `<div class="admin-item" style="display:flex; justify-content:space-between;">${state.groups[id].name} <button class="btn-danger" onclick="window.deleteGroup('${id}')">X</button></div>`;
         });
 
-        // Admin Zápasy
-        const mList = document.getElementById("adminMatchesList");
-        mList.innerHTML = "";
-        Object.keys(state.matches).forEach(id => {
+        const mList = document.getElementById("adminMatchesList"); mList.innerHTML = "";
+        Object.keys(state.matches).sort().reverse().forEach(id => {
             const m = state.matches[id];
-            let groupOptions = `<option value="none">Bez skupiny</option>`;
-            Object.keys(state.groups).forEach(gid => {
-                groupOptions += `<option value="${gid}" ${m.group === gid ? 'selected' : ''}>${state.groups[gid].name}</option>`;
-            });
-
+            let gOpts = `<option value="none">Bez skupiny</option>`;
+            Object.keys(state.groups).forEach(gid => gOpts += `<option value="${gid}" ${m.group===gid?'selected':''}>${state.groups[gid].name}</option>`);
+            
             mList.innerHTML += `<div class="admin-item">
-                <input value="${m.home} - ${m.away}" disabled style="background:transparent; border:none; font-weight:bold;">
-                <select onchange="window.updateMatch('${id}', 'group', this.value)">${groupOptions}</select>
                 <div style="display:flex; gap:5px;">
-                    <select onchange="window.updateMatch('${id}', 'status', this.value)">
-                        <option value="Plánováno" ${m.status==="Plánováno"?'selected':''}>Plánováno</option>
-                        <option value="T1" ${m.status==="T1"?'selected':''}>1. třetina</option>
-                        <option value="Po T1" ${m.status==="Po T1"?'selected':''}>Po 1. třetině</option>
-                        <option value="T2" ${m.status==="T2"?'selected':''}>2. třetina</option>
-                        <option value="Po T2" ${m.status==="Po T2"?'selected':''}>Po 2. třetině</option>
-                        <option value="T3" ${m.status==="T3"?'selected':''}>3. třetina</option>
-                        <option value="Konec" ${m.status==="Konec"?'selected':''}>Konec</option>
-                        <option value="Konec (PP)" ${m.status==="Konec (PP)"?'selected':''}>Konec PP</option>
-                        <option value="Konec (SN)" ${m.status==="Konec (SN)"?'selected':''}>Konec SN</option>
+                    <input style="width:40%" onchange="window.updateMatch('${id}','home',this.value)" value="${m.home}">
+                    <input style="width:40%" onchange="window.updateMatch('${id}','away',this.value)" value="${m.away}">
+                </div>
+                <input onchange="window.updateMatch('${id}','date',this.value)" value="${m.date}" placeholder="Datum">
+                <select onchange="window.updateMatch('${id}','group',this.value)">${gOpts}</select>
+                <div style="display:flex; gap:5px;">
+                    <select style="width:60%" onchange="window.updateMatch('${id}','status',this.value)">
+                        <option value="Plánováno" ${m.status==='Plánováno'?'selected':''}>Plánováno</option>
+                        <option value="1. Třetina" ${m.status==='1. Třetina'?'selected':''}>1. Třetina</option>
+                        <option value="Po 1. Třetině" ${m.status==='Po 1. Třetině'?'selected':''}>Po 1. Třetině</option>
+                        <option value="2. Třetina" ${m.status==='2. Třetina'?'selected':''}>2. Třetina</option>
+                        <option value="Po 2. Třetině" ${m.status==='Po 2. Třetině'?'selected':''}>Po 2. Třetině</option>
+                        <option value="3. Třetina" ${m.status==='3. Třetina'?'selected':''}>3. Třetina</option>
+                        <option value="Konec" ${m.status==='Konec'?'selected':''}>Konec</option>
                     </select>
-                    <input style="width:80px" placeholder="Stav" onchange="window.updateMatch('${id}', 'score', this.value)" value="${m.score}">
+                    <input style="width:40%" onchange="window.updateMatch('${id}','score',this.value)" value="${m.score}">
                 </div>
-                <div style="margin-top:5px; display:flex; gap:5px;">
-                    <button class="btn-alt" onclick="window.updateMatch('${id}', 'closed', ${!m.closed})">${m.closed?'Otevřít tipy':'Zavřít tipy'}</button>
-                    <button class="btn-danger" onclick="window.deleteMatch('${id}')">Smazat</button>
-                </div>
+                <button class="btn-alt" onclick="window.updateMatch('${id}','closed',${!m.closed})">${m.closed?'Otevřít':'Zavřít'}</button>
+                <button class="btn-danger" onclick="window.deleteMatch('${id}')">Smazat</button>
             </div>`;
         });
 
-        // Admin Hráči
-        const pList = document.getElementById("adminPlayersList");
-        pList.innerHTML = "";
+        const pList = document.getElementById("adminPlayersList"); pList.innerHTML = "";
         Object.keys(state.players).forEach(id => {
             const p = state.players[id];
-            pList.innerHTML += `<div class="admin-item">
-                <b>${p.name || "Neznámý"}</b> (${p.balance || 2000} TC)
-                <div style="display:flex; gap:5px; margin-top:5px;">
-                    <button onclick="window.modPlayerBalance('${id}', prompt('Částka (+/-):'))">+/- Peníze</button>
-                    <button onclick="window.modPlayerBalance('${id}', -${p.balance || 0} + 2000)">Reset</button>
-                    <button class="btn-danger" onclick="window.deletePlayer('${id}')">Smazat</button>
-                </div>
-            </div>`;
+            pList.innerHTML += `<div class="admin-item"><b>${p.name||'Borec'}</b>: ${p.balance||0} TC 
+                <button onclick="window.modPlayer('${id}','balance', (state.players['${id}'].balance||0)+parseInt(prompt('Kolik?')))">+/-</button>
+                <button class="btn-danger" onclick="remove(ref(db, 'tips/${id}'))">Smazat</button></div>`;
         });
     }
 
     function renderMain() {
-        // Tady bude logika pro zobrazení skupin lidem (přijde v dalším kroku)
-        const myData = state.players[state.pId];
-        document.getElementById("myBalance").innerText = myData?.balance || 2000;
-        
-        // Pokud má hráč 0, automaticky mu přidáme 100
-        if (myData && myData.balance <= 0) {
-            window.modPlayerBalance(state.pId, 100);
+        const container = document.getElementById("matchesContainer"); container.innerHTML = "";
+        const myData = state.players[state.pId] || { balance: 2000 };
+        document.getElementById("myBalance").innerText = myData.balance || (myData.balance === 0 ? 0 : 2000);
+        if(myData.balance <= 0 && !Object.values(state.matches).some(m => state.players[state.pId]?.bets?.[m.id])) {
+             if(myData.balance < 0 || myData.balance === 0) window.modPlayer(state.pId, 'balance', 100);
         }
-    }
 
+        // Seřazení skupin
+        const groups = Object.keys(state.groups).sort((a,b) => state.groups[a].order - state.groups[b].order);
+        [...groups, "none"].forEach(gId => {
+            const gMatches = Object.keys(state.matches).filter(mid => state.matches[mid].group === gId);
+            if(gMatches.length === 0) return;
+
+            const gName = gId === "none" ? "Ostatní" : state.groups[gId].name;
+            let gHtml = `<div class="group-container"><div class="group-header" onclick="this.nextElementSibling.classList.toggle('collapsed')">${gName} <span>▼</span></div><div class="group-content">`;
+            
+            gMatches.forEach(mId => {
+                const m = state.matches[mId];
+                const myBet = state.players[state.pId]?.bets?.[mId];
+                gHtml += `<div class="match">
+                    <div class="match-header"><span>${m.date}</span> <span class="status-badge">${m.status}</span></div>
+                    <div class="teams">${m.home} ${m.status !== 'Plánováno' ? `<span class="live-score">${m.score}</span>` : 'vs'} ${m.away}</div>
+                    ${myBet ? `<div style="color:#6ee7b7; font-size:13px;">Tvůj tip: ${myBet.tip} (Vsadil jsi ${myBet.stake} TC)</div>` : 
+                    `<button onclick="window.placeBet('${mId}')" ${m.closed ? 'disabled' : ''}>${m.closed ? 'Zavřeno' : 'Vsadit'}</button>`}
+                </div>`;
+            });
+            container.innerHTML += gHtml + "</div></div>";
+        });
+
+        // Tabulka
+        const table = document.getElementById("playersTable");
+        let players = Object.keys(state.players).sort((a,b) => (state.players[b].balance||0) - (state.players[a].balance||0));
+        let hHtml = `<tr><th>Pořadí</th><th>Hráč</th><th>Cash</th></tr>`;
+        players.forEach((pid, idx) => {
+            hHtml += `<tr class="${pid===state.pId?'my-row':''}"><td>${idx+1}.</td><td>${state.players[pid].name||'Borec'}</td><td><b>${state.players[pid].balance||0} TC</b></td></tr>`;
+        });
+        table.innerHTML = hHtml;
+    }
 </script>
 </body>
 </html>
