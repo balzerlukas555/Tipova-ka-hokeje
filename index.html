@@ -104,7 +104,6 @@
             transition: border-color 0.3s;
         }
 
-        /* Šedý proužek pro dohrané kategorie */
         .group-header.finished {
             border-left-color: #475569;
             color: #94a3b8;
@@ -115,7 +114,6 @@
             margin-bottom: 20px; 
         }
 
-        /* Výchozí schování */
         .group-content.collapsed { 
             display: none; 
         }
@@ -156,6 +154,80 @@
             border-radius: 4px; 
             font-size: 16px; 
             margin: 0 5px; 
+        }
+
+        /* --- TABULKA KOMUNITNÍCH SÁZEK --- */
+        .community-table-wrap {
+            width: 100%;
+            overflow-x: auto;
+            margin: 30px auto;
+            max-width: 950px;
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 10px;
+            border: 1px solid #3b82f6;
+        }
+
+        .community-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .community-table th {
+            color: #3b82f6;
+            padding: 12px;
+            border-bottom: 2px solid #334155;
+        }
+
+        .community-table td {
+            padding: 12px;
+            border-bottom: 1px solid #334155;
+        }
+
+        /* --- MOBILNÍ STYL (TAB) --- */
+        @media (max-width: 768px) {
+            .community-table-wrap {
+                background: transparent;
+                border: none;
+            }
+            .community-table, 
+            .community-table thead, 
+            .community-table tbody, 
+            .community-table th, 
+            .community-table td, 
+            .community-table tr {
+                display: block;
+            }
+            .community-table thead tr {
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+            .community-table tr {
+                background: #1e293b;
+                margin-bottom: 15px;
+                border-radius: 12px;
+                padding: 10px;
+                border: 1px solid #334155;
+            }
+            .community-table td {
+                border: none;
+                position: relative;
+                padding-left: 50%;
+                text-align: right;
+                min-height: 30px;
+            }
+            .community-table td::before {
+                position: absolute;
+                left: 15px;
+                width: 45%;
+                white-space: nowrap;
+                text-align: left;
+                font-weight: bold;
+                color: #3b82f6;
+                content: attr(data-label);
+            }
         }
 
         /* --- ŽEBŘÍČEK --- */
@@ -235,17 +307,15 @@
         .btn-alt { background: #475569; }
         .btn-gold { background: #d97706; }
         .btn-disabled { background: #334155; cursor: not-allowed; opacity: 0.5; }
-        /* Toto pravidlo změní barvu, jakmile je tlačítko "vypnuté" */
+
         button:disabled {
             background: #0a428c !important; 
             color: #fff !important;
             border: 1px solid #334155 !important;
             cursor: not-allowed;
-            box-shadow: none !important; /* Odstraní případný lesk */
+            box-shadow: none !important; 
             transform: none !important;
         }
-
-
         
         .btn-small { 
             padding: 4px 8px; 
@@ -293,6 +363,14 @@
         <div id="mainContent">
             <div id="matchesContainer">Načítám zápasy...</div>
             
+            <div class="community-table-wrap">
+                <h2 style="font-size:18px; color:#3b82f6">Aktuální sázky komunity</h2>
+                <table class="community-table">
+                    <thead id="commHeader"></thead>
+                    <tbody id="commBody"></tbody>
+                </table>
+            </div>
+
             <h2>Žebříček sázkařů</h2>
             <div class="table-wrap">
                 <table id="playersTable"></table>
@@ -301,7 +379,6 @@
 
         <div id="adminPanel" class="admin">
             <h2 style="text-align:center">Admin Panel</h2>
-            
             <div class="admin-section">
                 <h3>Správa skupin</h3>
                 <div style="display:flex; gap:5px;">
@@ -310,13 +387,11 @@
                 </div>
                 <div id="adminGroupsList" style="margin-top:10px;"></div>
             </div>
-
             <div class="admin-section">
                 <h3>Správa zápasů</h3>
                 <button onclick="window.addMatch()" class="btn-success" style="width:100%">+ Přidat nový zápas</button>
                 <div id="adminMatchesList" style="margin-top:10px;"></div>
             </div>
-
             <div class="admin-section">
                 <h3>Moderace hráčů</h3>
                 <div id="adminPlayersList"></div>
@@ -494,9 +569,46 @@
         state.players = d.tips || {};
         renderAdmin(); 
         renderMain();
+        renderCommunityTable();
     });
 
-    // --- RENDER ---
+    // --- RENDER FUNKCE ---
+
+    function renderCommunityTable() {
+        const header = document.getElementById("commHeader");
+        const body = document.getElementById("commBody");
+        
+        const activeMids = Object.keys(state.matches).filter(mid => state.matches[mid].status !== "Dohráno");
+        
+        if(activeMids.length === 0) {
+            document.querySelector(".community-table-wrap").style.display = "none";
+            return;
+        } else {
+            document.querySelector(".community-table-wrap").style.display = "block";
+        }
+
+        let hHtml = `<tr><th>Hráč</th>`;
+        activeMids.forEach(mid => {
+            const m = state.matches[mid];
+            hHtml += `<th>${m.home.slice(0,3)}-${m.away.slice(0,3)}</th>`;
+        });
+        hHtml += `</tr>`;
+        header.innerHTML = hHtml;
+
+        let bHtml = "";
+        Object.keys(state.players).forEach(pid => {
+            const p = state.players[pid];
+            bHtml += `<tr><td data-label="Hráč"><b>${p.name || 'Borec'}</b></td>`;
+            activeMids.forEach(mid => {
+                const bet = p.bets?.[mid];
+                const m = state.matches[mid];
+                const label = `${m.home.slice(0,3)}-${m.away.slice(0,3)}`;
+                bHtml += `<td data-label="${label}">${bet ? bet.tip : '-'}</td>`;
+            });
+            bHtml += `</tr>`;
+        });
+        body.innerHTML = bHtml;
+    }
 
     function renderAdmin() {
         const gList = document.getElementById("adminGroupsList"); gList.innerHTML = "";
