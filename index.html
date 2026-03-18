@@ -578,7 +578,7 @@
         const header = document.getElementById("commHeader");
         const body = document.getElementById("commBody");
         
-        // FILTR: Pouze zápasy, které jsou ZAVŘENÉ (closed: true) a nejsou hotové
+        // OPRAVA LOGIKY: Zobrazíme zápasy, kde m.closed je TRUE (v Adminu svítí "Otevřít")
         const activeMids = Object.keys(state.matches).filter(mid => {
             const m = state.matches[mid];
             return m.closed === true && m.status !== "Dohráno";
