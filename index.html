@@ -578,10 +578,10 @@
         const header = document.getElementById("commHeader");
         const body = document.getElementById("commBody");
         
-        // OPRAVA LOGIKY: Zobrazíme zápasy, kde m.closed je TRUE (v Adminu svítí "Otevřít")
+        // FILTR: Zobrazíme sázky komunity jen pro zápasy, které jsou OTEVŘENÉ (closed: false)
         const activeMids = Object.keys(state.matches).filter(mid => {
             const m = state.matches[mid];
-            return m.closed === true && m.status !== "Dohráno";
+            return m.closed === false && m.status !== "Dohráno";
         });
         
         if(activeMids.length === 0) {
