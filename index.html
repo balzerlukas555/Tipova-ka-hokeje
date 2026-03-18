@@ -614,7 +614,8 @@
                 const m = state.matches[mid];
                 const isLive = m.status !== "Plánováno" && m.status !== "Dohráno";
                 const label = `${m.home.slice(0,3)}-${m.away.slice(0,3)}${isLive ? ' (LIVE)' : ''}`;
-                bHtml += `<td data-label="${label}" style="${isLive ? 'background: rgba(239, 68, 68, 0.1);' : ''}">${bet ? bet.tip : '-'}</td>`;
+                // Úprava: Zobrazení tipu i vkladu
+                bHtml += `<td data-label="${label}" style="${isLive ? 'background: rgba(239, 68, 68, 0.1);' : ''}">${bet ? `${bet.tip} (${bet.stake})` : '-'}</td>`;
             });
             bHtml += `</tr>`;
         });
