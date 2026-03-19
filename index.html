@@ -83,6 +83,15 @@
             gap: 10px;
         }
 
+        /* --- STYLY PRO HISTORII (NOVÉ) --- */
+        .hist-table { width: 100%; border-collapse: separate; border-spacing: 0 5px; margin-top: 15px; font-size: 12px; }
+        .hist-row-gold { background: linear-gradient(90deg, #d97706, #b45309); color: white; font-weight: bold; }
+        .hist-row-win { background: #059669; color: white; }
+        .hist-row-loss { background: #991b1b; color: white; }
+        .hist-table td { padding: 10px 5px; }
+        .hist-table td:first-child { border-radius: 8px 0 0 8px; padding-left: 10px; font-weight: bold; }
+        .hist-table td:last-child { border-radius: 0 8px 8px 0; padding-right: 10px; text-align: right; }
+
         /* --- SKUPINY (KATEGORIE) --- */
         .group-container { 
             margin: 20px auto; 
@@ -358,6 +367,8 @@
             </div>
             <div>Moje peněženka</div>
             <div class="balance-val"><span id="myBalance">2500</span> TC</div>
+            
+            <div id="myHistory"></div>
         </div>
 
         <div id="mainContent">
@@ -520,23 +531,39 @@
         }
     };
 
+    // --- UPRAVENÁ FUNKCE EVALUATE ---
     window.evaluateMatch = (mId) => {
         const m = state.matches[mId];
-        if(m.status !== "Konec") return alert("Zápas musí být 'Konec'!");
+        if(m.status !== "Konec" && m.status !== "Dohráno") return alert("Zápas musí být 'Konec'!");
         if(!confirm(`Vyhodnotit ${m.home}-${m.away} (${m.score})?`)) return;
 
         Object.keys(state.players).forEach(pId => {
-            const bet = state.players[pId]?.bets?.[mId];
+            const p = state.players[pId];
+            const bet = p?.bets?.[mId];
             if(!bet) return;
+            
             let mult = 0;
             const [hS, aS] = m.score.split(":").map(Number);
             const [bH, bA] = bet.tip.split(":").map(Number);
             let win = hS > aS ? "1" : (aS > hS ? "2" : "0");
             let bWin = bH > bA ? "1" : (bA > bH ? "2" : "0");
+            
             if(bet.tip === m.score) mult = 3; 
             else if(bWin === win) mult = 2;
+
+            // ZÁPIS DO HISTORIE
+            const historyRef = ref(db, `tips/${pId}/history/h${mId}`);
+            set(historyRef, {
+                match: `${m.home.slice(0,3)}-${m.away.slice(0,3)}`,
+                tip: bet.tip,
+                score: m.score,
+                gain: mult > 0 ? (bet.stake * mult) : -bet.stake,
+                type: mult === 3 ? "gold" : (mult === 2 ? "win" : "loss"),
+                time: Date.now()
+            });
+
             if(mult > 0) {
-                const cur = state.players[pId].balance || 0;
+                const cur = p.balance || 0;
                 update(ref(db, `tips/${pId}`), { balance: cur + (bet.stake * mult) });
             }
             remove(ref(db, `tips/${pId}/bets/${mId}`));
@@ -578,9 +605,6 @@
         const header = document.getElementById("commHeader");
         const body = document.getElementById("commBody");
         
-        // FILTR: 
-        // 1. Zápas je otevřený (closed === false) 
-        // 2. NEBO zápas je uzavřený, ale je LIVE (není "Plánováno" ani "Dohráno")
         const activeMids = Object.keys(state.matches).filter(mid => {
             const m = state.matches[mid];
             const isLive = m.status !== "Plánováno" && m.status !== "Dohráno";
@@ -598,7 +622,6 @@
         activeMids.forEach(mid => {
             const m = state.matches[mid];
             const isLive = m.status !== "Plánováno" && m.status !== "Dohráno";
-            // Pokud je Live, přidáme k názvu týmu (LIVE) a třeba ohraničení
             const liveTag = isLive ? `<br><span style="color:#ef4444; font-size:10px;">LIVE</span>` : "";
             hHtml += `<th style="${isLive ? 'border: 1px solid #ef4444;' : ''}">${m.home.slice(0,3)}-${m.away.slice(0,3)}${liveTag}</th>`;
         });
@@ -614,7 +637,6 @@
                 const m = state.matches[mid];
                 const isLive = m.status !== "Plánováno" && m.status !== "Dohráno";
                 const label = `${m.home.slice(0,3)}-${m.away.slice(0,3)}${isLive ? ' (LIVE)' : ''}`;
-                // Úprava: Zobrazení tipu i vkladu
                 bHtml += `<td data-label="${label}" style="${isLive ? 'background: rgba(239, 68, 68, 0.1);' : ''}">${bet ? `${bet.tip} (${bet.stake})` : '-'}</td>`;
             });
             bHtml += `</tr>`;
@@ -663,6 +685,26 @@
         document.getElementById("myBalance").innerText = myData.balance !== undefined ? myData.balance : 2500;
         document.getElementById("displayName").innerText = myData.name || "Hráč";
         
+        // RENDER HISTORIE (TABULKA POSLEDNÍCH 3)
+        let histHtml = '<table class="hist-table">';
+        const history = myData.history || {};
+        const lastThree = Object.values(history).sort((a,b) => b.time - a.time).slice(0,3);
+        if(lastThree.length > 0) {
+            lastThree.forEach(h => {
+                const rowClass = h.type === "gold" ? "hist-row-gold" : (h.type === "win" ? "hist-row-win" : "hist-row-loss");
+                histHtml += `<tr class="${rowClass}">
+                    <td>${h.match}</td>
+                    <td>T:${h.tip}</td>
+                    <td>V:${h.score}</td>
+                    <td>${h.gain > 0 ? '+' : ''}${h.gain} TC</td>
+                </tr>`;
+            });
+        } else {
+            histHtml += '<tr><td style="color:#94a3b8; text-align:center;">Zatím žádná historie</td></tr>';
+        }
+        histHtml += '</table>';
+        document.getElementById("myHistory").innerHTML = histHtml;
+
         const sortedGroups = Object.keys(state.groups).sort((a,b) => state.groups[a].order - state.groups[b].order);
         
         [...sortedGroups, "none"].forEach(gId => {
