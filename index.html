@@ -167,19 +167,12 @@
 
         /* --- SPECIÁLNÍ SÁZKA UI --- */
         .special-bet-card {
-            background: linear-gradient(135deg, #1e294b 0%, #0f172a 100%);
-            border: 2px solid #3b82f6;
-            border-radius: 12px;
-            padding: 15px;
-            margin: 15px auto;
-            max-width: 450px;
-            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
-            animation: pulse-border 2s infinite;
-        }
-        @keyframes pulse-border {
-            0% { border-color: #3b82f6; }
-            50% { border-color: #60a5fa; }
-            100% { border-color: #3b82f6; }
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px dashed #3b82f6;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 15px;
+            text-align: center;
         }
 
         /* --- ADMIN SCORE CONTROLS --- */
@@ -390,8 +383,6 @@
     <div id="appUI" style="display:none">
         <h1>Tipovačka</h1>
         
-        <div id="specialBetUI"></div>
-        
         <div class="wallet-card">
             <div class="name-tag">
                 <span id="displayName">Načítám...</span>
@@ -402,6 +393,8 @@
             <div class="balance-val"><span id="myBalance">2500</span> TC</div>
             
             <div id="myHistory"></div>
+
+            <div id="specialBetUI"></div>
         </div>
 
         <div id="mainContent">
@@ -784,21 +777,6 @@
     function renderMain() {
         if (!state.pId) return;
         
-        const specDiv = document.getElementById("specialBetUI");
-        if(specDiv) {
-            if(state.specialBet && state.specialBet.active) {
-                specDiv.innerHTML = `
-                    <div class="special-bet-card" style="margin-bottom: 20px;">
-                        <div style="color:#3b82f6; font-size:12px; font-weight:bold; text-transform:uppercase; margin-bottom:5px;"Speciální sázka</div>
-                        <div style="font-size:16px; font-weight:bold; margin-bottom:5px;">${state.specialBet.text}</div>
-                        <div style="color:#6ee7b7; font-size:14px;">Odměna: ${state.specialBet.reward} TC</div>
-                    </div>`;
-            } else {
-                specDiv.innerHTML = "";
-            }
-        }
-
-        const container = document.getElementById("matchesContainer"); container.innerHTML = "";
         const myData = state.players[state.pId] || { balance: 2500, name: "Hráč" };
         document.getElementById("myBalance").innerText = myData.balance !== undefined ? myData.balance : 2500;
         document.getElementById("displayName").innerText = myData.name || "Hráč";
@@ -823,6 +801,22 @@
         histHtml += '</table>';
         document.getElementById("myHistory").innerHTML = histHtml;
 
+        // RENDER SPECIÁLNÍ SÁZKY UVNITŘ KARTY
+        const specDiv = document.getElementById("specialBetUI");
+        if(specDiv) {
+            if(state.specialBet && state.specialBet.active) {
+                specDiv.innerHTML = `
+                    <div class="special-bet-card">
+                        <div style="color:#3b82f6; font-size:11px; font-weight:bold; text-transform:uppercase; margin-bottom:2px;">⚡ Speciální sázka</div>
+                        <div style="font-size:14px; font-weight:bold;">${state.specialBet.text}</div>
+                        <div style="color:#6ee7b7; font-size:12px;">Odměna: ${state.specialBet.reward} TC</div>
+                    </div>`;
+            } else {
+                specDiv.innerHTML = "";
+            }
+        }
+
+        const container = document.getElementById("matchesContainer"); container.innerHTML = "";
         const sortedGroups = Object.keys(state.groups).sort((a,b) => state.groups[a].order - state.groups[b].order);
         
         [...sortedGroups, "none"].forEach(gId => {
