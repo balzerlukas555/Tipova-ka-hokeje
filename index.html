@@ -165,16 +165,6 @@
             margin: 0 5px; 
         }
 
-        /* --- SPECIÁLNÍ SÁZKA UI --- */
-        .special-bet-card {
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px dashed #3b82f6;
-            border-radius: 8px;
-            padding: 10px;
-            margin-top: 15px;
-            text-align: center;
-        }
-
         /* --- ADMIN SCORE CONTROLS --- */
         .score-control {
             display: flex;
@@ -393,8 +383,6 @@
             <div class="balance-val"><span id="myBalance">2500</span> TC</div>
             
             <div id="myHistory"></div>
-
-            <div id="specialBetUI"></div>
         </div>
 
         <div id="mainContent">
@@ -416,16 +404,6 @@
 
         <div id="adminPanel" class="admin">
             <h2 style="text-align:center">Admin Panel</h2>
-
-            <div class="admin-section">
-                <h3>Speciální sázka</h3>
-                <input id="specBetText" placeholder="Text sázky (např. Kdo dá další gól?)">
-                <input id="specBetReward" placeholder="Odměna (např. 500 TC)" type="number">
-                <div style="display:flex; gap:5px; margin-top:5px;">
-                    <button onclick="window.setSpecialBet()" class="btn-success" style="flex:1">Vyhlásit</button>
-                    <button onclick="window.removeSpecialBet()" class="btn-danger" style="flex:1">Zrušit</button>
-                </div>
-            </div>
 
             <div class="admin-section">
                 <h3>Správa skupin</h3>
@@ -468,7 +446,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const auth = getAuth(app);
-    let state = { matches: {}, groups: {}, players: {}, pId: null, specialBet: null };
+    let state = { matches: {}, groups: {}, players: {}, pId: null };
 
     // --- AUTH FUNKCE ---
     window.toggleAuth = (showReg) => {
@@ -543,17 +521,6 @@
         let parts = m.score.split(":").map(Number);
         parts[teamIdx] = Math.max(0, parts[teamIdx] + delta);
         window.updateMatch(id, 'score', parts.join(":"));
-    };
-
-    window.setSpecialBet = () => {
-        const text = document.getElementById("specBetText").value;
-        const reward = document.getElementById("specBetReward").value;
-        if(!text) return alert("Zadej text sázky!");
-        set(ref(db, "specialBet"), { text, reward, active: true });
-    };
-
-    window.removeSpecialBet = () => {
-        remove(ref(db, "specialBet"));
     };
 
     window.deleteMatch = (id) => {
@@ -661,7 +628,6 @@
         state.matches = d.matches || {}; 
         state.groups = d.groups || {}; 
         state.players = d.tips || {};
-        state.specialBet = d.specialBet || null;
         renderAdmin(); 
         renderMain();
         renderCommunityTable();
@@ -781,7 +747,6 @@
         document.getElementById("myBalance").innerText = myData.balance !== undefined ? myData.balance : 2500;
         document.getElementById("displayName").innerText = myData.name || "Hráč";
         
-        // RENDER HISTORIE
         let histHtml = '<table class="hist-table">';
         const history = myData.history || {};
         const lastThree = Object.values(history).sort((a,b) => b.time - a.time).slice(0,3);
@@ -800,21 +765,6 @@
         }
         histHtml += '</table>';
         document.getElementById("myHistory").innerHTML = histHtml;
-
-        // RENDER SPECIÁLNÍ SÁZKY UVNITŘ KARTY
-        const specDiv = document.getElementById("specialBetUI");
-        if(specDiv) {
-            if(state.specialBet && state.specialBet.active) {
-                specDiv.innerHTML = `
-                    <div class="special-bet-card">
-                        <div style="color:#3b82f6; font-size:11px; font-weight:bold; text-transform:uppercase; margin-bottom:2px;">⚡ Speciální sázka</div>
-                        <div style="font-size:14px; font-weight:bold;">${state.specialBet.text}</div>
-                        <div style="color:#6ee7b7; font-size:12px;">Odměna: ${state.specialBet.reward} TC</div>
-                    </div>`;
-            } else {
-                specDiv.innerHTML = "";
-            }
-        }
 
         const container = document.getElementById("matchesContainer"); container.innerHTML = "";
         const sortedGroups = Object.keys(state.groups).sort((a,b) => state.groups[a].order - state.groups[b].order);
