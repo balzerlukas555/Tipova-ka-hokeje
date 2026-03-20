@@ -401,6 +401,7 @@
             <div class="admin-section">
                 <h3>Správa zápasů</h3>
                 <button onclick="window.addMatch()" class="btn-success" style="width:100%">+ Přidat nový zápas</button>
+                <button onclick="window.deleteAllMatches()" class="btn-danger" style="width:100%; margin-top:5px; font-size:12px;">Smazat všechny zápasy</button>
                 <div id="adminMatchesList" style="margin-top:10px;"></div>
             </div>
             <div class="admin-section">
@@ -504,11 +505,25 @@
         if(confirm("Smazat zápas?")) remove(ref(db, `matches/${id}`));
     };
 
+    // NOVÉ: SMAZAT VŠECHNY ZÁPASY
+    window.deleteAllMatches = () => {
+        if(confirm("OPRAVDU SMAZAT VŠECHNY ZÁPASY ZE SLOŽKY MATCHES?")) {
+            remove(ref(db, `matches`));
+        }
+    };
+
     window.modPlayer = (id, field, val) => update(ref(db, `tips/${id}`), { [field]: val });
 
     window.deletePlayer = (id) => {
         if(confirm("Opravdu smazat tohoto hráče?")) {
             remove(ref(db, `tips/${id}`));
+        }
+    };
+
+    // NOVÉ: SMAZAT HISTORII HRÁČE
+    window.deletePlayerHistory = (id) => {
+        if(confirm("Opravdu smazat celou historii zápasů tohoto hráče?")) {
+            remove(ref(db, `tips/${id}/history`));
         }
     };
 
@@ -673,6 +688,7 @@
                 <div style="display:flex; gap:5px; margin-top:8px;">
                     <button style="flex:1" onclick="window.adjustPlayerBalance('${id}')">+/- TC</button>
                     <button style="flex:1" onclick="window.modPlayer('${id}','balance', 2500)">Reset</button>
+                    <button style="flex:1; font-size:10px;" class="btn-alt" onclick="window.deletePlayerHistory('${id}')">Smazat historii</button>
                     <button class="btn-danger" onclick="window.deletePlayer('${id}')">Smazat</button>
                 </div></div>`;
         });
