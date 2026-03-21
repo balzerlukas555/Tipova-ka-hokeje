@@ -92,6 +92,9 @@
         .hist-table td:first-child { border-radius: 8px 0 0 8px; padding-left: 10px; font-weight: bold; }
         .hist-table td:last-child { border-radius: 0 8px 8px 0; padding-right: 10px; text-align: right; }
 
+        /* NOVÉ: Šipka pro historii */
+        .hist-toggle { color: #3b82f6; cursor: pointer; font-size: 12px; margin-top: 8px; display: inline-block; text-decoration: underline; }
+
         /* --- SKUPINY (KATEGORIE) --- */
         .group-container { 
             margin: 20px auto; 
@@ -137,13 +140,20 @@
             position: relative; 
         }
 
+        /* Zajištění zobrazení i v collapsed stavu */
+        .match.pinned { display: block !important; border: 1px solid #fbbf24; }
+
         .match-header { 
             font-size: 12px; 
             color: #94a3b8; 
             margin-bottom: 8px; 
             display: flex; 
             justify-content: space-between; 
+            align-items: center;
         }
+
+        .pin-btn { cursor: pointer; font-size: 16px; margin-right: 8px; filter: grayscale(1); transition: 0.2s; }
+        .pin-btn.active { filter: grayscale(0); transform: rotate(-45deg); }
 
         .status-badge { 
             color: #3b82f6; 
@@ -383,6 +393,7 @@
             <div class="balance-val"><span id="myBalance">2500</span> TC</div>
             
             <div id="myHistory"></div>
+            <div id="histToggle" class="hist-toggle" onclick="window.toggleFullHistory()">Zobrazit celou historii ▼</div>
         </div>
 
         <div id="mainContent">
@@ -446,7 +457,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const auth = getAuth(app);
-    let state = { matches: {}, groups: {}, players: {}, pId: null };
+    let state = { matches: {}, groups: {}, players: {}, pId: null, showFullHistory: false };
 
     // --- AUTH FUNKCE ---
     window.toggleAuth = (showReg) => {
@@ -493,6 +504,26 @@
             document.getElementById('intro').classList.add('hidden');
         }, 1200);
     });
+
+    // NOVÉ: Připínání zápasů
+    window.togglePin = (mId, event) => {
+        event.stopPropagation();
+        let pinned = JSON.parse(localStorage.getItem('pinnedMatches') || "[]");
+        if(pinned.includes(mId)) {
+            pinned = pinned.filter(id => id !== mId);
+        } else {
+            pinned.push(mId);
+        }
+        localStorage.setItem('pinnedMatches', JSON.stringify(pinned));
+        renderMain();
+    };
+
+    // NOVÉ: Rozbalení historie
+    window.toggleFullHistory = () => {
+        state.showFullHistory = !state.showFullHistory;
+        document.getElementById('histToggle').innerText = state.showFullHistory ? "Zobrazit jen 3 ▲" : "Zobrazit celou historii ▼";
+        renderMain();
+    };
 
     window.adminLogin = () => { 
         if (prompt("Heslo:") === "Tip333") document.getElementById("adminPanel").style.display = "block"; 
@@ -749,9 +780,13 @@
         
         let histHtml = '<table class="hist-table">';
         const history = myData.history || {};
-        const lastThree = Object.values(history).sort((a,b) => b.time - a.time).slice(0,3);
-        if(lastThree.length > 0) {
-            lastThree.forEach(h => {
+        const allHistory = Object.values(history).sort((a,b) => b.time - a.time);
+        
+        // Rozhodnutí kolik řádků ukázat
+        const displayedHistory = state.showFullHistory ? allHistory : allHistory.slice(0,3);
+
+        if(displayedHistory.length > 0) {
+            displayedHistory.forEach(h => {
                 const rowClass = h.type === "gold" ? "hist-row-gold" : (h.type === "win" ? "hist-row-win" : "hist-row-loss");
                 histHtml += `<tr class="${rowClass}">
                     <td>${h.match}</td>
@@ -765,10 +800,13 @@
         }
         histHtml += '</table>';
         document.getElementById("myHistory").innerHTML = histHtml;
+        document.getElementById("histToggle").style.display = allHistory.length > 3 ? "inline-block" : "none";
 
         const container = document.getElementById("matchesContainer"); container.innerHTML = "";
         const sortedGroups = Object.keys(state.groups).sort((a,b) => state.groups[a].order - state.groups[b].order);
         
+        const pinnedIds = JSON.parse(localStorage.getItem('pinnedMatches') || "[]");
+
         [...sortedGroups, "none"].forEach(gId => {
             const gMatches = Object.keys(state.matches).filter(mid => state.matches[mid].group === gId);
             if(gMatches.length === 0) return;
@@ -785,7 +823,13 @@
             
             gMatches.forEach(mId => {
                 const m = state.matches[mId]; const myBet = state.players[state.pId]?.bets?.[mId]; const isF = m.status === 'Dohráno';
-                gHtml += `<div class="match"><div class="match-header"><span>${m.date}</span> <span class="status-badge">${m.status}</span></div>
+                const isPinned = pinnedIds.includes(mId);
+
+                gHtml += `<div class="match ${isPinned ? 'pinned' : ''}">
+                        <div class="match-header">
+                            <div><span class="pin-btn ${isPinned ? 'active' : ''}" onclick="window.togglePin('${mId}', event)">📌</span><span>${m.date}</span></div>
+                            <span class="status-badge">${m.status}</span>
+                        </div>
                         <div class="teams">${m.home} ${m.status !== 'Plánováno' && !isF ? `<span class="live-score">${m.score}</span>` : (isF ? `<span class="live-score" style="background:#059669">${m.score}</span>` : 'vs')} ${m.away}</div>
                         ${myBet ? `<div onclick="window.placeBet('${mId}')" style="color:#6ee7b7; font-size:13px; cursor:pointer; margin-top:5px;">Tip: ${myBet.tip} (${myBet.stake} TC) ✍️</div>` : 
                         `<button onclick="window.placeBet('${mId}')" ${m.closed ? 'disabled' : ''} style="width:100%">${m.closed ? 'Zavřeno' : 'Vsadit'}</button>`}</div>`;
